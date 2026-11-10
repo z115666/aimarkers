@@ -10,12 +10,15 @@ dist/
 build/
 *.egg-info/
 
-# Informes generados (pueden contener extractos de código ajeno)
+# Generated reports (may contain excerpts of third-party content)
 informe*.html
+report*.html
 informe*.md
+report*.md
 informe*.json
-!ejemplos/informe_ejemplo.*
+report*.json
+!ejemplos/*
 
-# Sistema
+# System
 .DS_Store
 Thumbs.db

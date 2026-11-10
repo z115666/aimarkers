@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>aimarkers · AI markers report</title>
+<style>
+:root { --bg:#f7f7f5; --card:#fff; --txt:#1d1d1f; --sub:#6b6b70; --borde:#e2e2e0;
+  --exp:#b3261e; --fue:#d9480f; --med:#b7791f; --deb:#2b6cb0; }
+@media (prefers-color-scheme: dark) { :root { --bg:#141416; --card:#1e1e21; --txt:#ececee; --sub:#9a9aa0;
+  --borde:#2e2e33; --exp:#ff6b62; --fue:#ff8a4c; --med:#f2b84b; --deb:#6aa8ff; } }
+* { box-sizing:border-box } body { margin:0; background:var(--bg); color:var(--txt);
+  font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif; padding:24px 16px }
+main { max-width:1000px; margin:0 auto } h1 { font-size:22px; margin:0 0 4px }
+.aviso { color:var(--sub); margin:0 0 24px }
+section { background:var(--card); border:1px solid var(--borde); border-radius:12px; padding:20px; margin-bottom:20px }
+.cabecera { display:flex; gap:18px; align-items:center; margin-bottom:12px }
+.cabecera h2 { font-size:16px; margin:0; word-break:break-all } .meta { color:var(--sub); margin:2px 0 }
+.banda { margin:2px 0; font-weight:600 }
+.marcador { flex:0 0 92px; width:92px; height:92px; border-radius:50%; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; border:6px solid var(--borde); line-height:1 }
+.marcador span { font-size:26px; font-weight:700 } .marcador small { color:var(--sub); font-size:11px; margin-top:3px }
+.alta { border-color:var(--exp) } .media { border-color:var(--fue) }
+.baja { border-color:var(--med) } .nula { border-color:var(--deb) }
+.explicita { color:var(--exp); font-weight:600 }
+table { width:100%; border-collapse:collapse; font-size:14px } th,td { text-align:left; vertical-align:top;
+  padding:8px; border-top:1px solid var(--borde) } th { color:var(--sub); font-weight:600 }
+td ul { margin:0; padding-left:16px } code { font-size:12px; color:var(--sub) } .num { text-align:right }
+.nivel { font-size:12px; font-weight:700; padding:2px 8px; border-radius:99px; color:#fff; white-space:nowrap }
+.explicito { background:var(--exp) } .fuerte { background:var(--fue) } .medio { background:var(--med) }
+.debil { background:var(--deb) } .mas { color:var(--sub); list-style:none }
+details { margin-top:12px; color:var(--sub) }
+@media (max-width:640px) { table, tbody, tr, td { display:block } thead { display:none }
+  td { border:none; padding:4px 0 } tr { border-top:1px solid var(--borde); padding:8px 0 }
+  td.num { text-align:left; color:var(--sub) } td.num::before { content:"Count: " } }
+</style></head>
+<body><main>
+<h1>AI markers report</h1>
+<p class="aviso">aimarkers 1.1.0 · 2026-11-10 20:27 · Markers are signs, not proof. Review every piece of evidence before drawing conclusions; the absence of markers does not prove human authorship either.</p>
+
+<section>
+  <div class="cabecera">
+    <div class="marcador nula"><span>14</span><small>/100</small></div>
+    <div><h2>tests/fixtures/web/actividades_sintetico.html</h2>
+      <p class="meta">web page (HTML) · 1 file analysed</p>
+      <p class="banda">Weak signs: compatible traits, nothing conclusive</p></div>
+  </div>
+  <table><thead><tr><th>Level</th><th>Marker</th><th>Count</th><th>Evidence</th></tr></thead><tbody><tr><td><span class='nivel medio'>Medium</span></td><td>Burst of records created seconds apart (automated load)</td><td class='num'>1</td><td><ul><li><code>actividades_sintetico.html:embedded data</code> 25 records between 2026-11-09 23:42:45+01:00 and 23:43:33 (local time), median gap 2.0 s</li></ul></td></tr><tr><td><span class='nivel debil'>Weak</span></td><td>Framework built with AI (Cloudflare vinext)</td><td class='num'>1</td><td><ul><li><code>actividades_sintetico.html:3</code> ipt src=&quot;/_next/static/chunks/vinext-EJEMPLO.js&quot; type=&quot;module&quot;&gt;&lt;/script&gt;&lt;/he</li></ul></td></tr><tr><td><span class='nivel debil'>Weak</span></td><td>Mixed coordinate precision (two data sources)</td><td class='num'>1</td><td><ul><li><code>actividades_sintetico.html:embedded data</code> 26 with ≤6 decimals, 24 with ≥7 decimals, 0 near-round, out of 50</li></ul></td></tr></tbody></table>
+</section>
+<section>
+  <div class="cabecera">
+    <div class="marcador alta"><span>100</span><small>/100</small></div>
+    <div><h2>tests/fixtures/codigo_ia</h2>
+      <p class="meta">directory · 3 files analysed</p>
+      <p class="banda">High likelihood of AI generation or heavy AI assistance</p></div>
+  </div>
+  <p class='explicita'>EXPLICIT ATTRIBUTION: the content itself declares an AI tool.</p><table><thead><tr><th>Level</th><th>Marker</th><th>Count</th><th>Evidence</th></tr></thead><tbody><tr><td><span class='nivel explicito'>Explicit</span></td><td>AI tool signature in the content</td><td class='num'>1</td><td><ul><li><code>backup_manager.py:3</code> &quot;&quot;&quot; Backup manager utility. Generated with Claude Code &quot;&quot;&quot; import os import shutil API_KEY =</li></ul></td></tr><tr><td><span class='nivel fuerte'>Strong</span></td><td>Configuration folder for AI agents</td><td class='num'>1</td><td><ul><li><code>.claude</code> .claude/ → Claude Code</li></ul></td></tr><tr><td><span class='nivel fuerte'>Strong</span></td><td>Instruction file for AI agents</td><td class='num'>2</td><td><ul><li><code>.cursorrules</code> .cursorrules → Cursor</li><li><code>CLAUDE.md</code> CLAUDE.md → Claude Code</li></ul></td></tr><tr><td><span class='nivel fuerte'>Strong</span></td><td>Chat phrase pasted into the file</td><td class='num'>1</td><td><ul><li><code>Limpiar-Temp.ps1:1</code> # Here&#x27;s the updated script with improved error handling: ``</li></ul></td></tr><tr><td><span class='nivel fuerte'>Strong</span></td><td>File wrapped in a Markdown fence (```) pasted from the chat</td><td class='num'>1</td><td><ul><li><code>Limpiar-Temp.ps1:2</code> ```powershell</li></ul></td></tr><tr><td><span class='nivel medio'>Medium</span></td><td>Demo-style code comment</td><td class='num'>2</td><td><ul><li><code>Limpiar-Temp.ps1:8</code> # En un entorno real, aquí iría la lógica de registro</li><li><code>backup_manager.py:47</code> # In a real application, you would upload this to cloud storage</li></ul></td></tr><tr><td><span class='nivel medio'>Medium</span></td><td>Emojis in console or log messages</td><td class='num'>2</td><td><ul><li><code>Limpiar-Temp.ps1:10</code> 1 line; e.g. Write-Host &quot;✅ Limpieza completada&quot;</li><li><code>backup_manager.py:24</code> 3 lines; e.g. print(&quot;❌ Source folder not found&quot;)</li></ul></td></tr><tr><td><span class='nivel medio'>Medium</span></td><td>Example value left unreplaced</td><td class='num'>1</td><td><ul><li><code>backup_manager.py:8</code> API_KEY = &quot;your_api_key_here&quot; # Replace with your actual API key</li></ul></td></tr><tr><td><span class='nivel debil'>Weak</span></td><td>Numbered step comments («# Step 1:»)</td><td class='num'>2</td><td><ul><li><code>Limpiar-Temp.ps1:3</code> 3 step comments; e.g. # Paso 1: Obtener los ficheros temporales</li><li><code>backup_manager.py:22</code> 3 step comments; e.g. # Step 1: Validate input</li></ul></td></tr><tr><td><span class='nivel debil'>Weak</span></td><td>Args/Returns docstrings on almost every function</td><td class='num'>1</td><td><ul><li><code>backup_manager.py</code> 5 of 5 functions</li></ul></td></tr><tr><td><span class='nivel debil'>Weak</span></td><td>Repeated generic error handling («An error occurred»)</td><td class='num'>1</td><td><ul><li><code>backup_manager.py</code> 3 blocks</li></ul></td></tr></tbody></table>
+</section>
+<section>
+  <div class="cabecera">
+    <div class="marcador alta"><span>72</span><small>/100</small></div>
+    <div><h2>tests/fixtures/texto/articulo_ia.md</h2>
+      <p class="meta">text · 1 file analysed</p>
+      <p class="banda">High likelihood of AI generation or heavy AI assistance</p></div>
+  </div>
+  <p class='explicita'>EXPLICIT ATTRIBUTION: the content itself declares an AI tool.</p><table><thead><tr><th>Level</th><th>Marker</th><th>Count</th><th>Evidence</th></tr></thead><tbody><tr><td><span class='nivel explicito'>Explicit</span></td><td>Link copied from an AI assistant (utm_source=chatgpt.com…)</td><td class='num'>1</td><td><ul><li><code>articulo_ia.md:19</code> a](https://www.incibe.es/guia?utm_source=chatgpt.com). Espero que te sea útil. ¿Quieres que</li></ul></td></tr><tr><td><span class='nivel fuerte'>Strong</span></td><td>Typical chat-reply closing line</td><td class='num'>1</td><td><ul><li><code>articulo_ia.md:21</code> uia?utm_source=chatgpt.com). Espero que te sea útil. ¿Quieres que añada una lista de verifi</li></ul></td></tr><tr><td><span class='nivel debil'>Weak</span></td><td>High density of typical LLM stock phrases</td><td class='num'>1</td><td><ul><li><code>articulo_ia.md</code> 13 occurrences (41.8/1000 words): cabe destacar, desempeña un papel crucial, en definitiva, en el panorama actual, es importante señalar, fomentar, no solo a...</li></ul></td></tr><tr><td><span class='nivel debil'>Weak</span></td><td>Systematic «**Term:** explanation» bullet points</td><td class='num'>1</td><td><ul><li><code>articulo_ia.md</code> 5 of 5 bullets</li></ul></td></tr><tr><td><span class='nivel debil'>Weak</span></td><td>Headings that start with an emoji</td><td class='num'>1</td><td><ul><li><code>articulo_ia.md</code> 4 headings</li></ul></td></tr><tr><td><span class='nivel debil'>Weak</span></td><td>Very uniform sentence length (low burstiness)</td><td class='num'>1</td><td><ul><li><code>articulo_ia.md</code> 22 sentences, mean 11.2 words, coefficient of variation 0.26</li></ul></td></tr></tbody></table>
+</section>
+<section>
+  <div class="cabecera">
+    <div class="marcador alta"><span>93</span><small>/100</small></div>
+    <div><h2>tests/fixtures/web/landing.html</h2>
+      <p class="meta">web page (HTML) · 1 file analysed</p>
+      <p class="banda">High likelihood of AI generation or heavy AI assistance</p></div>
+  </div>
+  <table><thead><tr><th>Level</th><th>Marker</th><th>Count</th><th>Evidence</th></tr></thead><tbody><tr><td><span class='nivel fuerte'>Strong</span></td><td>Lovable fingerprint (data-lov-*, gptengineer, lovable-tagger)</td><td class='num'>2</td><td><ul><li><code>landing.html:2</code> &lt;/title&gt; &lt;script src=&quot;https://cdn.gpteng.co/gptengineer.js&quot; type=&quot;module&quot;&gt;&lt;/script&gt;</li><li><code>landing.html:3</code> &quot;&gt;&lt;/script&gt;&lt;/head&gt; &lt;body&gt;&lt;div data-lov-id=&quot;src/pages/Index.tsx:12:4&quot; class=&quot;bg-gr</li></ul></td></tr><tr><td><span class='nivel fuerte'>Strong</span></td><td>v0 (Vercel) fingerprint</td><td class='num'>1</td><td><ul><li><code>landing.html:1</code> &quot;&gt;&lt;head&gt;&lt;meta charset=&quot;utf-8&quot;&gt;&lt;meta name=&quot;generator&quot; content=&quot;v0.app&quot;&gt;&lt;title&gt;Clínica Dental Sonrisa&lt;/title&gt; &lt;</li></ul></td></tr><tr><td><span class='nivel fuerte'>Strong</span></td><td>Image named after an AI generator</td><td class='num'>1</td><td><ul><li><code>landing.html:5</code> &quot;&gt;Reservar cita&lt;/button&gt; &lt;img src=&quot;/assets/ChatGPT Image 3 nov 2026, 10_12_45.png&quot; alt=&quot;equipo&quot;&gt; &lt;h1&gt;Tu sonrisa, nuestra p</li></ul></td></tr><tr><td><span class='nivel fuerte'>Strong</span></td><td>Chat phrase pasted into the file</td><td class='num'>1</td><td><ul><li><code>landing.html (visible text):4</code> Tu sonrisa, nuestra prioridad Claro, aquí tienes el texto para la sección de bienvenida:</li></ul></td></tr><tr><td><span class='nivel debil'>Weak</span></td><td>Default stack of AI builders (shadcn/ui, lucide, gradients)</td><td class='num'>1</td><td><ul><li><code>landing.html</code> 3 of 3 traits present</li></ul></td></tr></tbody></table><details><summary>Notes</summary><ul><li>landing.html: meta generator = «v0.app»</li></ul></details>
+</section>
+<section>
+  <div class="cabecera">
+    <div class="marcador media"><span>40</span><small>/100</small></div>
+    <div><h2>tests/fixtures/imagenes/c2pa_ia.png</h2>
+      <p class="meta">image · 1 file analysed</p>
+      <p class="banda">Likely AI assistance in part of the content</p></div>
+  </div>
+  <p class='explicita'>EXPLICIT ATTRIBUTION: the content itself declares an AI tool.</p><table><thead><tr><th>Level</th><th>Marker</th><th>Count</th><th>Evidence</th></tr></thead><tbody><tr><td><span class='nivel explicito'>Explicit</span></td><td>C2PA Content Credentials declare AI generation</td><td class='num'>1</td><td><ul><li><code>c2pa_ia.png:C2PA</code> source: AI-generated; tool: Prueba Generador IA 1.0; signer: C2PA Test Signing Cert (C2PA Signer); signature: not verified (install c2patool)</li></ul></td></tr></tbody></table><details><summary>Notes</summary><ul><li>c2patool is not installed: C2PA signatures were not verified (brew install c2patool).</li></ul></details>
+</section>
+<section>
+  <div class="cabecera">
+    <div class="marcador media"><span>40</span><small>/100</small></div>
+    <div><h2>tests/fixtures/imagenes/sd_parametros.png</h2>
+      <p class="meta">image · 1 file analysed</p>
+      <p class="banda">Likely AI assistance in part of the content</p></div>
+  </div>
+  <p class='explicita'>EXPLICIT ATTRIBUTION: the content itself declares an AI tool.</p><table><thead><tr><th>Level</th><th>Marker</th><th>Count</th><th>Evidence</th></tr></thead><tbody><tr><td><span class='nivel explicito'>Explicit</span></td><td>Stable Diffusion/ComfyUI/InvokeAI generation parameters in the image</td><td class='num'>1</td><td><ul><li><code>sd_parametros.png:PNG «parameters»</code> a lighthouse at dusk, oil painting Negative prompt: blurry Steps: 30, Sampler: DPM++ 2M Karras, CFG scale: 7, Seed: 12345, Size: 512x512, Model: sd_xl</li></ul></td></tr></tbody></table>
+</section>
+<section>
+  <div class="cabecera">
+    <div class="marcador nula"><span>0</span><small>/100</small></div>
+    <div><h2>tests/fixtures/imagenes/c2pa_camara.jpg</h2>
+      <p class="meta">image · 1 file analysed</p>
+      <p class="banda">No relevant signs</p></div>
+  </div>
+  <p>No markers found.</p><details><summary>Notes</summary><ul><li>c2patool is not installed: C2PA signatures were not verified (brew install c2patool).</li><li>c2pa_camara.jpg: C2PA credentials without an AI declaration (source: digital capture (camera); tool: Prueba Cámara 2.3; signer: C2PA Test Signing Cert (C2PA Signer); signature: not verified (install c2patool)).</li></ul></details>
+</section>
+</main></body></html>

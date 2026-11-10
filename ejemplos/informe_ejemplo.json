@@ -6,6 +6,7 @@
     "valoracion": "Indicios débiles: rasgos compatibles, nada concluyente",
     "atribucion_explicita": false,
     "ficheros_analizados": 1,
+    "idioma": "es",
     "notas": [],
     "hallazgos": [
       {
@@ -61,6 +62,7 @@
     "valoracion": "Alta probabilidad de generación o asistencia intensa con IA",
     "atribucion_explicita": true,
     "ficheros_analizados": 3,
+    "idioma": "es",
     "notas": [],
     "hallazgos": [
       {
@@ -260,12 +262,13 @@
     "valoracion": "Alta probabilidad de generación o asistencia intensa con IA",
     "atribucion_explicita": true,
     "ficheros_analizados": 1,
+    "idioma": "es",
     "notas": [],
     "hallazgos": [
       {
         "regla": "utm-chatgpt",
         "nivel": "explicito",
-        "descripcion": "Enlace copiado desde ChatGPT (utm_source=chatgpt.com/openai)",
+        "descripcion": "Enlace copiado desde un asistente de IA (utm_source=chatgpt.com…)",
         "ubicacion": "articulo_ia.md:19",
         "extracto": "a](https://www.incibe.es/guia?utm_source=chatgpt.com). Espero que te sea útil. ¿Quieres que",
         "peso": 40
@@ -283,7 +286,7 @@
         "nivel": "debil",
         "descripcion": "Densidad alta de muletillas típicas de LLM",
         "ubicacion": "articulo_ia.md",
-        "extracto": "13 apariciones (41.8/1000 palabras): cabe destacar, desempeña un papel crucial, en definitiva, en el panorama actual, es importante señal...",
+        "extracto": "13 apariciones (41.8/1000 palabras): cabe destacar, desempeña un papel crucial, en definitiva, en el panorama actual, es importante señalar, fomentar, no sol...",
         "peso": 3
       },
       {
@@ -357,6 +360,7 @@
     "valoracion": "Alta probabilidad de generación o asistencia intensa con IA",
     "atribucion_explicita": false,
     "ficheros_analizados": 1,
+    "idioma": "es",
     "notas": [
       "landing.html: meta generator = «v0.app»"
     ],
@@ -442,5 +446,78 @@
         "prevalencia": 1.0
       }
     }
+  },
+  {
+    "objetivo": "tests/fixtures/imagenes/c2pa_ia.png",
+    "tipo": "imagen",
+    "puntuacion": 40,
+    "valoracion": "Probable asistencia de IA en parte del contenido",
+    "atribucion_explicita": true,
+    "ficheros_analizados": 1,
+    "idioma": "es",
+    "notas": [
+      "c2patool no está instalado: las firmas C2PA no se han verificado (brew install c2patool)."
+    ],
+    "hallazgos": [
+      {
+        "regla": "c2pa-ia",
+        "nivel": "explicito",
+        "descripcion": "Credenciales de contenido C2PA declaran generación con IA",
+        "ubicacion": "c2pa_ia.png:C2PA",
+        "extracto": "origen: generada con IA; herramienta: Prueba Generador IA 1.0; firmante: C2PA Test Signing Cert (C2PA Signer); firma: no verificada (instala c2patool)",
+        "peso": 40
+      }
+    ],
+    "resumen_por_marcador": {
+      "c2pa-ia": {
+        "nivel": "explicito",
+        "veces": 1,
+        "puntos": 40.0,
+        "prevalencia": 1.0
+      }
+    }
+  },
+  {
+    "objetivo": "tests/fixtures/imagenes/sd_parametros.png",
+    "tipo": "imagen",
+    "puntuacion": 40,
+    "valoracion": "Probable asistencia de IA en parte del contenido",
+    "atribucion_explicita": true,
+    "ficheros_analizados": 1,
+    "idioma": "es",
+    "notas": [],
+    "hallazgos": [
+      {
+        "regla": "parametros-generacion",
+        "nivel": "explicito",
+        "descripcion": "Parámetros de generación de Stable Diffusion/ComfyUI/InvokeAI en la imagen",
+        "ubicacion": "sd_parametros.png:PNG «parameters»",
+        "extracto": "a lighthouse at dusk, oil painting Negative prompt: blurry Steps: 30, Sampler: DPM++ 2M Karras, CFG scale: 7, Seed: 12345, Size: 512x512, Model: sd_xl",
+        "peso": 40
+      }
+    ],
+    "resumen_por_marcador": {
+      "parametros-generacion": {
+        "nivel": "explicito",
+        "veces": 1,
+        "puntos": 40.0,
+        "prevalencia": 1.0
+      }
+    }
+  },
+  {
+    "objetivo": "tests/fixtures/imagenes/c2pa_camara.jpg",
+    "tipo": "imagen",
+    "puntuacion": 0,
+    "valoracion": "Sin indicios relevantes",
+    "atribucion_explicita": false,
+    "ficheros_analizados": 1,
+    "idioma": "es",
+    "notas": [
+      "c2patool no está instalado: las firmas C2PA no se han verificado (brew install c2patool).",
+      "c2pa_camara.jpg: credenciales C2PA sin declaración de IA (origen: captura digital (cámara); herramienta: Prueba Cámara 2.3; firmante: C2PA Test Signing Cert (C2PA Signer); firma: no verificada (instala c2patool))."
+    ],
+    "hallazgos": [],
+    "resumen_por_marcador": {}
   }
 ]

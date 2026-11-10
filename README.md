@@ -1,26 +1,31 @@
 # aimarkers
 
+**English** · [Español](README.es.md)
+
 [![CI](https://github.com/z115666/aimarkers/actions/workflows/ci.yml/badge.svg)](https://github.com/z115666/aimarkers/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/z115666/aimarkers/actions/workflows/codeql.yml/badge.svg)](https://github.com/z115666/aimarkers/actions/workflows/codeql.yml)
-[![Licencia: MIT](https://img.shields.io/badge/licencia-MIT-blue.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)
 
-Herramienta de línea de comandos para buscar **marcadores de IA** en código fuente, documentación, webs (fichero HTML o URL) y repositorios Git. Puntúa cada indicio por niveles y genera un informe con las evidencias.
+Command-line tool that looks for **AI markers** in source code, documentation, websites (HTML file or URL), **images** (C2PA Content Credentials, IPTC, EXIF and generation parameters) and Git repositories. It scores each sign by level and produces a report with the evidence, in English or Spanish.
 
-> Los marcadores son indicios, no pruebas. La herramienta ayuda a revisar; la conclusión la pones tú.
+> Markers are signs, not proof. The tool helps you review; the conclusion is yours.
 
-## Instalación
+## Installation
 
-### macOS con Homebrew
+### macOS with Homebrew
 
 ```bash
 brew install z115666/tap/aimarkers
 aimarkers --version
+
+# Optional: cryptographic verification of C2PA signatures
+brew install c2patool
 ```
 
-Para actualizar: `brew update && brew upgrade aimarkers`.
+To update: `brew update && brew upgrade aimarkers`.
 
-### Cualquier sistema (Windows, macOS, Linux)
+### Any system (Windows, macOS, Linux)
 
 ```bash
 git clone https://github.com/z115666/aimarkers.git
@@ -28,86 +33,126 @@ cd aimarkers
 python3 aimarkers.py --version
 ```
 
-Requisitos: Python 3.9 o superior y, para analizar historiales, `git` en el PATH. Solo usa la biblioteca estándar: no hay dependencias que instalar. En Windows usa `py` en lugar de `python3`.
+Requirements: Python 3.9 or later and, to analyse history, `git` on the PATH. It only uses the standard library, so there are no dependencies to install. On Windows use `py` instead of `python3`. [`c2patool`](https://github.com/contentauth/c2pa-rs/tree/main/cli) is optional and only needed to verify C2PA signatures.
 
-## Uso
+## Usage
 
-Si lo instalaste con Homebrew, usa `aimarkers` en lugar de `python3 aimarkers.py` en los ejemplos.
+If you installed it with Homebrew, use `aimarkers` instead of `python3 aimarkers.py` in the examples.
 
 ```bash
-# Un repositorio (analiza ficheros + historial Git + ramas)
-python3 aimarkers.py ~/Proyectos/mi-repo
+# A repository (files, images, Git history and branches)
+python3 aimarkers.py ~/Projects/my-repo
 
-# Ficheros sueltos
-python3 aimarkers.py informe.md Limpiar-Temp.ps1
+# Individual files
+python3 aimarkers.py report.md Clean-Temp.ps1
 
-# Una web por URL (descarga la página y comprueba /llms.txt)
-python3 aimarkers.py https://ejemplo.com
+# Images
+python3 aimarkers.py photo.jpg ~/Downloads/*.png
 
-# Una web guardada con "Guardar como…" o con el código fuente copiado
-python3 aimarkers.py pagina.html
+# A website by URL (downloads the page and its images, and checks /llms.txt)
+python3 aimarkers.py https://example.com
 
-# Informes
-python3 aimarkers.py ./proyecto --html informe.html --md informe.md --json informe.json
+# A page saved with "Save as…"
+python3 aimarkers.py page.html
+
+# Reports
+python3 aimarkers.py ./project --html report.html --md report.md --json report.json
 ```
 
-### Opciones
+### Language
 
-| Opción | Qué hace |
+Output follows the system language (Spanish if the locale starts with `es`, English otherwise). To force it:
+
+```bash
+aimarkers --lang es report.md
+AIMARKERS_LANG=en aimarkers report.md
+```
+
+The language applies to the console and the reports. Marker identifiers (`coautor-ia`, `c2pa-ia`…) and JSON keys do not change, so scripts that rely on them keep working.
+
+### Options
+
+| Option | What it does |
 | --- | --- |
-| `--html FICHERO` | Informe HTML autocontenido (modo claro y oscuro, legible en móvil) |
-| `--md FICHERO` | Informe en Markdown |
-| `--json FICHERO` | Resultado completo en JSON, con `resumen_por_marcador` |
-| `--evidencias N` | Evidencias mostradas por marcador (por defecto 3) |
-| `--umbral N` | Sale con código 2 si algún objetivo llega a N puntos (útil en CI) |
-| `--silencioso` | No imprime el informe en consola |
-| `--sin-color` | Consola sin colores |
+| `--html FILE` | Self-contained HTML report (light and dark mode, mobile friendly) |
+| `--md FILE` | Markdown report |
+| `--json FILE` | Full result as JSON, including `resumen_por_marcador` (per-marker summary) |
+| `--lang es\|en` | Output language |
+| `--evidence N` | Evidence items shown per marker (default 3) |
+| `--threshold N` | Exit with code 2 if any target reaches N points (useful in CI) |
+| `--no-images` | Do not analyse images linked from web pages |
+| `--quiet` | Do not print the report to the console |
+| `--no-color` | Plain console output |
 
-## Cómo puntúa
+Every option also has a Spanish name: `--evidencias`, `--umbral`, `--sin-imagenes`, `--silencioso`, `--sin-color`.
 
-| Nivel | Peso | Ejemplos |
+## Scoring
+
+| Level | Weight | Examples |
 | --- | --- | --- |
-| Explícito | 40 | `Co-Authored-By: Claude`, `🤖 Generated with Claude Code`, `utm_source=chatgpt.com`, autor `copilot-swe-agent[bot]` |
-| Fuerte | 20 | `CLAUDE.md`, `.cursorrules`, `.claude/`, `data-lov-id` (Lovable), «Claro, aquí tienes…», rama `claude/…` |
-| Medio | 8 | Comentarios «In a real application…», `your_api_key_here`, emojis en logs, ráfagas de registros cada 2 s |
-| Débil | 3 | Muletillas de LLM por densidad, rayas (—), docstrings uniformes, ritmo de frases uniforme |
+| Explicit | 40 | `Co-Authored-By: Claude`, `🤖 Generated with Claude Code`, `utm_source=chatgpt.com`, author `copilot-swe-agent[bot]`, C2PA or IPTC declaring an AI-generated image, Stable Diffusion parameters |
+| Strong | 20 | `CLAUDE.md`, `.cursorrules`, `.claude/`, `data-lov-id` (Lovable), "Sure! Here is the updated…", branch `claude/…`, `Software: Midjourney` in EXIF |
+| Medium | 8 | "In a real application…" comments, `your_api_key_here`, emojis in logs, bursts of records created 2 s apart |
+| Weak | 3 | Density of LLM stock phrases, em dashes (—), uniform docstrings, uniform sentence rhythm |
 
-- Un marcador repetido suma con rendimiento decreciente, hasta 3 veces su peso.
-- En proyectos de 10 ficheros o más, los marcadores **medios y débiles** se ponderan por prevalencia: puntúan completos si afectan al 10 % de los ficheros y proporcionalmente menos si son casos aislados. Así un proyecto grande no se dispara por acumulación de rasgos sueltos.
-- El estilo de un texto no se valora por debajo de 150 palabras.
-- Tope de 100 puntos.
+- A repeated marker adds up with diminishing returns, up to 3 times its weight.
+- In projects with 10 or more files, **medium and weak** markers are weighted by prevalence: they score in full when they affect 10% of the files and proportionally less when they are isolated.
+- Writing style is not assessed below 150 words.
+- The score is capped at 100.
 
-| Puntuación | Valoración |
+| Score | Assessment |
 | --- | --- |
-| 0–14 | Sin indicios relevantes (o «indicios débiles» si hay algún marcador medio o fuerte) |
-| 15–39 | Indicios débiles |
-| 40–69 | Probable asistencia de IA en parte del contenido |
-| 70–100 | Alta probabilidad de generación o asistencia intensa |
+| 0–14 | No relevant signs (or "weak signs" if there is any medium or strong marker) |
+| 15–39 | Weak signs |
+| 40–69 | Likely AI assistance in part of the content |
+| 70–100 | High likelihood of AI generation or heavy AI assistance |
 
-## Qué analiza
+## What it analyses
 
-- **Código** (`.py`, `.ps1`, `.js`, `.ts`, `.sh`, `.cs`, `.go`…): firmas de herramientas, restos de chat, ficheros envueltos en vallas ```` ``` ````, comentarios de demostración, placeholders, emojis en logs, pasos numerados, docstrings uniformes, errores genéricos, tipografía rara en código.
-- **Texto** (`.md`, `.txt`, `.rst`…): citas de ChatGPT (`oaicite`, `turn0search0`), enlaces con `utm_source=chatgpt.com`, cierres de chat, huecos `[Nombre de la empresa]`, muletillas en español e inglés, viñetas «**Término:**», títulos con emoji, ritmo de frases.
-- **Webs**: huellas de Lovable, v0, Bolt, Readdy, Base44 y similares; imágenes con nombre de generador (`ChatGPT Image…`, `DALL·E`, `Gemini_Generated_Image`); stack por defecto de los generadores; framework `vinext`; **datos embebidos** (ráfagas de `created_at` y precisión de coordenadas); el texto visible con las reglas de texto.
-- **Repositorios Git**: trailers `Co-authored-by`, pies «Generated with», autores bot, ramas de agentes, commits enormes, mensajes uniformes; además, ficheros y carpetas de agentes (`CLAUDE.md`, `AGENTS.md`, `.cursor/`, `.github/copilot-instructions.md`…).
+- **Code** (`.py`, `.ps1`, `.js`, `.ts`, `.sh`, `.cs`, `.go`…): tool signatures, chat leftovers, files wrapped in ```` ``` ```` fences, demo comments, placeholders, emojis in logs, numbered steps, uniform docstrings, generic error handling, unusual typography in code.
+- **Text** (`.md`, `.txt`, `.rst`…): ChatGPT citation residue (`oaicite`, `turn0search0`), links with `utm_source=chatgpt.com`, chat closings, `[Company Name]` placeholders, stock phrases in English and Spanish, "**Term:**" bullets, emoji headings, sentence rhythm.
+- **Websites**: fingerprints of Lovable, v0, Bolt, Readdy, Base44 and similar; images named after generators (`ChatGPT Image…`, `DALL·E`, `Gemini_Generated_Image`); the default stack of AI builders; the `vinext` framework; **embedded data** (bursts of `created_at` values and coordinate precision); the visible text with the text rules; and the **metadata of the page's images**.
+- **Images** (`.jpg`, `.png`, `.webp`, `.heic`, `.avif`, `.tif`…): see the next section.
+- **Git repositories**: `Co-authored-by` trailers, "Generated with" footers, bot authors, agent branches, huge commits, uniform messages; plus agent files and folders (`CLAUDE.md`, `AGENTS.md`, `.cursor/`, `.github/copilot-instructions.md`…).
 
-Ignora `node_modules`, `.venv`, `dist`, `build`, `.git` (como ficheros) y el código minificado.
+It skips `node_modules`, `.venv`, `dist`, `build`, `.git` (as files) and minified code.
 
-## Excluir ficheros
+## Images: C2PA and other metadata
 
-Añade `aimarkers: ignore-file` en las primeras líneas de un fichero para que no se analice. Lo usa el propio `aimarkers.py`, que contiene todos los patrones que busca.
+[C2PA](https://c2pa.org/) (*Content Credentials*) is an open standard for attaching a **signed manifest** to a file that records its provenance: which tool created it, which actions were applied and whether it was generated with AI. It is used by ChatGPT/DALL·E, Adobe Firefly, Microsoft Designer, Google and some cameras (Leica, Sony, Nikon), among others. The manifest is stored inside the image in JUMBF boxes holding CBOR data and a COSE signature with an X.509 certificate.
 
-Ojo: la carpeta `tests/fixtures/` contiene ejemplos con IA a propósito. Si analizas la carpeta de la herramienta entera, saldrá con puntuación alta.
+aimarkers reads, with no dependencies:
 
-## Pruebas
+| Source | Where it lives | What it looks for | Level |
+| --- | --- | --- | --- |
+| C2PA manifest | JPEG (APP11), PNG (`caBX`), WebP (`C2PA`), HEIC/AVIF/TIFF | `digitalSourceType` = `trainedAlgorithmicMedia` (AI-generated) or `compositeWithTrainedAlgorithmicMedia` (AI-edited); an AI tool as claim generator or `softwareAgent`. It also shows the certificate signer | Explicit |
+| IPTC in XMP | `Iptc4xmpExt:DigitalSourceType` | The same digital source type values | Explicit |
+| PNG text | `tEXt`, `zTXt`, `iTXt` | Stable Diffusion `parameters` (A1111/Forge), ComfyUI `prompt`/`workflow`, InvokeAI, NovelAI | Explicit |
+| EXIF and XMP | `Software`, `Artist`, `ImageDescription`, `CreatorTool`… | Generator names (Midjourney, DALL·E, Firefly, Stable Diffusion, Gemini…) | Strong |
+
+A C2PA manifest **without** an AI declaration (for example, a camera photo) does not score: it appears as a note with the source, tool and signer.
+
+**Signature verification.** aimarkers parses the manifest but does not verify the cryptography. If `c2patool` is installed (`brew install c2patool`), it uses it to check that the signature is valid and that the image has not been modified after signing, and says so in the evidence: "valid, trusted certificate", "valid, unrecognised certificate" or "INVALID". Without `c2patool` the evidence says "not verified".
+
+**Limits.** Metadata is easily lost: screenshots, many social networks and many editors strip it. The absence of C2PA means nothing. An unverified manifest can be forged; install `c2patool` for a firm conclusion.
+
+**Images on websites.** In URL mode, aimarkers downloads up to 15 images from the page (`<img src>`, `og:image`, `twitter:image`), over http(s) only and up to 15 MB each, into a temporary folder that is deleted afterwards. With a local HTML file it only analyses images inside the HTML file's folder. `--no-images` turns both off.
+
+## Excluding files
+
+Add `aimarkers: ignore-file` in the first lines of a file to skip it. `aimarkers.py` itself uses it, because it contains every pattern it looks for.
+
+Note: the `tests/fixtures/` folder deliberately contains examples with markers. If you analyse the whole tool folder, it will score high.
+
+## Tests
 
 ```bash
 python3 -m unittest discover tests -v
 ```
 
-Incluyen casos con IA (código, texto, web generada, repositorio con commits de agente creado al vuelo, web sintética con carga masiva de datos) y casos humanos (notas escritas a mano y la biblioteca estándar de Python), para vigilar los falsos positivos.
+They include positive cases (code, text, a generated website, a repository with agent commits built on the fly, a synthetic website with a bulk data load, images with signed C2PA, IPTC, EXIF and Stable Diffusion and ComfyUI parameters) and negative cases (handwritten notes, the Python standard library, a camera photo with C2PA and another with normal EXIF). They also test hostile input: decompression bombs, malformed JUMBF boxes and randomly corrupted images.
 
-Para desarrollar, instala las herramientas de análisis con versiones y hashes fijados:
+For development, install the analysis tools with pinned versions and hashes:
 
 ```bash
 python3 -m pip install --require-hashes --no-deps -r requirements-dev.txt
@@ -115,31 +160,32 @@ ruff check .
 bandit -c pyproject.toml -r aimarkers.py
 ```
 
-Validación hecha: la biblioteca estándar de Python y sus paquetes (11.630 ficheros) puntúa 3/100; una web real con una carga masiva de 144 registros en 5 minutos se detecta como ráfaga; el repositorio `psf/requests` puntúa 48/100 por un commit real de marzo de 2026 con `Co-Authored-By: Claude Opus 4.6`.
+Validation done: the Python standard library (11,630 files) scores 3/100; 400 system images give no false positives; a real website with 144 records loaded in 5 minutes is detected as a burst; the `psf/requests` repository scores 48/100 because of a real March 2026 commit with `Co-Authored-By: Claude Opus 4.6`.
 
-## Ampliar reglas
+## Extending the rules
 
-Las reglas están al principio de `aimarkers.py`, en listas de tuplas `(id, nivel, descripción, patrón)`:
+The rules are at the top of `aimarkers.py`, in lists of `(id, level, pattern)` tuples. Descriptions in both languages are in the `DESCRIPCIONES` dictionary, and all other texts in `TEXTOS`.
 
-- `REGLAS_GENERALES`: se aplican a todo.
-- `REGLAS_CHAT` y `REGLA_HUECO`: restos de conversación.
-- `REGLAS_CODIGO_LINEA`: línea a línea en código.
-- `REGLAS_HTML`: webs.
-- `MULETILLAS_ES` / `MULETILLAS_EN`: frases típicas (solo cuentan por densidad).
-- `FICHEROS_AGENTE` / `DIRS_AGENTE`: nombres de ficheros y carpetas de agentes.
+- `REGLAS_GENERALES`: applied to everything.
+- `REGLAS_CHAT` and `REGLA_HUECO`: chat leftovers.
+- `REGLAS_CODIGO_LINEA`: line by line in code.
+- `REGLAS_HTML`: websites.
+- `RE_GENERADOR_META`: generator names in image metadata.
+- `MULETILLAS_ES` / `MULETILLAS_EN`: stock phrases (they only count by density).
+- `FICHEROS_AGENTE` / `DIRS_AGENTE`: agent file and folder names.
 
-Añade la regla, crea un fixture en `tests/fixtures/` y una prueba en `tests/test_aimarkers.py`.
+Add the rule and its Spanish and English description, create a fixture in `tests/fixtures/` and a test in `tests/test_aimarkers.py`.
 
-## Seguridad
+## Security
 
-aimarkers está diseñado para analizar contenido no confiable. Invoca `git` con una configuración endurecida para que un repositorio manipulado no pueda ejecutar comandos (hooks, `fsmonitor`, `textconv`), acota las expresiones regulares frente a ReDoS, no sigue enlaces simbólicos, limita tamaños y solo descarga por http(s). El detalle, el modelo de amenazas y cómo informar de vulnerabilidades están en [SECURITY.md](SECURITY.md).
+aimarkers is designed to analyse untrusted content. It runs `git` with a hardened configuration so that a tampered repository cannot execute commands (hooks, `fsmonitor`, `textconv`), bounds regular expressions against ReDoS, limits decompression and nesting depth when reading images, does not follow symbolic links, limits sizes and only downloads over http(s). Details, the threat model and how to report vulnerabilities are in [SECURITY.md](SECURITY.md).
 
-## Limitaciones
+## Limitations
 
-- No comprueba si el código usa APIs inventadas: eso exige ejecutarlo o revisarlo contra la documentación.
-- No lee metadatos C2PA de imágenes; para eso usa `exiftool imagen.png`.
-- La ausencia de marcadores no demuestra autoría humana: los trailers y pies se pueden borrar y los textos se pueden reescribir.
-- Las URLs que necesitan JavaScript para mostrar contenido se analizan solo por su HTML inicial. En ese caso, guarda la página desde el navegador y analiza el fichero.
+- It does not check whether code calls invented APIs: that requires running it or checking it against the documentation.
+- It does not detect AI images from their pixels, only from their metadata. Nor does it read invisible watermarks such as SynthID.
+- The absence of markers does not prove human authorship: trailers and footers can be removed, text can be rewritten and metadata can be stripped.
+- URLs that need JavaScript to render content are analysed only by their initial HTML. In that case, save the page from the browser and analyse the file.
 
 ---
-Autor: Alberto · [Licencia MIT](LICENSE)
+Author: Alberto · [MIT License](LICENSE)

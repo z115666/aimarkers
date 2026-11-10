@@ -6,7 +6,7 @@ on:
   pull_request:
   workflow_dispatch:
 
-# Mínimo privilegio: el token del workflow solo puede leer el repositorio
+# Least privilege: the workflow token can only read the repository
 permissions:
   contents: read
 
@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   calidad-seguridad:
-    name: Lint y análisis estático (ruff + bandit)
+    name: Lint and static analysis (ruff + bandit)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -26,7 +26,7 @@ jobs:
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.13"
-      - name: Instalar herramientas (versiones y hashes fijados)
+      - name: Install tools (pinned versions and hashes)
         run: python -m pip install --require-hashes --no-deps -r requirements-dev.txt
       - name: Ruff
         run: ruff check --output-format=github .
@@ -34,7 +34,7 @@ jobs:
         run: bandit -c pyproject.toml -r aimarkers.py
 
   pruebas:
-    name: Pruebas (${{ matrix.os }}, Python ${{ matrix.python }})
+    name: Tests (${{ matrix.os }}, Python ${{ matrix.python }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     strategy:
@@ -49,7 +49,7 @@ jobs:
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: ${{ matrix.python }}
-      - name: Pruebas unitarias
+      - name: Unit tests
         run: python -B -m unittest discover tests -v
-      - name: Prueba de humo del CLI
-        run: python aimarkers.py tests/fixtures/texto/notas_humanas.md --sin-color
+      - name: CLI smoke test
+        run: python aimarkers.py tests/fixtures/texto/notas_humanas.md tests/fixtures/imagenes/c2pa_ia.jpg --no-color --lang en

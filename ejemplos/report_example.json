@@ -1,0 +1,523 @@
+[
+  {
+    "objetivo": "tests/fixtures/web/actividades_sintetico.html",
+    "tipo": "web page (HTML)",
+    "puntuacion": 14,
+    "valoracion": "Weak signs: compatible traits, nothing conclusive",
+    "atribucion_explicita": false,
+    "ficheros_analizados": 1,
+    "idioma": "en",
+    "notas": [],
+    "hallazgos": [
+      {
+        "regla": "framework-ia",
+        "nivel": "debil",
+        "descripcion": "Framework built with AI (Cloudflare vinext)",
+        "ubicacion": "actividades_sintetico.html:3",
+        "extracto": "ipt src=\"/_next/static/chunks/vinext-EJEMPLO.js\" type=\"module\"></script></he",
+        "peso": 3
+      },
+      {
+        "regla": "rafaga-datos",
+        "nivel": "medio",
+        "descripcion": "Burst of records created seconds apart (automated load)",
+        "ubicacion": "actividades_sintetico.html:embedded data",
+        "extracto": "25 records between 2026-11-09 23:42:45+01:00 and 23:43:33 (local time), median gap 2.0 s",
+        "peso": 8
+      },
+      {
+        "regla": "coordenadas-mixtas",
+        "nivel": "debil",
+        "descripcion": "Mixed coordinate precision (two data sources)",
+        "ubicacion": "actividades_sintetico.html:embedded data",
+        "extracto": "26 with ≤6 decimals, 24 with ≥7 decimals, 0 near-round, out of 50",
+        "peso": 3
+      }
+    ],
+    "resumen_por_marcador": {
+      "framework-ia": {
+        "nivel": "debil",
+        "veces": 1,
+        "puntos": 3.0,
+        "prevalencia": 1.0
+      },
+      "rafaga-datos": {
+        "nivel": "medio",
+        "veces": 1,
+        "puntos": 8.0,
+        "prevalencia": 1.0
+      },
+      "coordenadas-mixtas": {
+        "nivel": "debil",
+        "veces": 1,
+        "puntos": 3.0,
+        "prevalencia": 1.0
+      }
+    }
+  },
+  {
+    "objetivo": "tests/fixtures/codigo_ia",
+    "tipo": "directory",
+    "puntuacion": 100,
+    "valoracion": "High likelihood of AI generation or heavy AI assistance",
+    "atribucion_explicita": true,
+    "ficheros_analizados": 3,
+    "idioma": "en",
+    "notas": [],
+    "hallazgos": [
+      {
+        "regla": "carpeta-agente",
+        "nivel": "fuerte",
+        "descripcion": "Configuration folder for AI agents",
+        "ubicacion": ".claude",
+        "extracto": ".claude/ → Claude Code",
+        "peso": 20
+      },
+      {
+        "regla": "fichero-agente",
+        "nivel": "fuerte",
+        "descripcion": "Instruction file for AI agents",
+        "ubicacion": ".cursorrules",
+        "extracto": ".cursorrules → Cursor",
+        "peso": 20
+      },
+      {
+        "regla": "fichero-agente",
+        "nivel": "fuerte",
+        "descripcion": "Instruction file for AI agents",
+        "ubicacion": "CLAUDE.md",
+        "extracto": "CLAUDE.md → Claude Code",
+        "peso": 20
+      },
+      {
+        "regla": "resto-chat",
+        "nivel": "fuerte",
+        "descripcion": "Chat phrase pasted into the file",
+        "ubicacion": "Limpiar-Temp.ps1:1",
+        "extracto": "# Here's the updated script with improved error handling: ``",
+        "peso": 20
+      },
+      {
+        "regla": "comentario-demo",
+        "nivel": "medio",
+        "descripcion": "Demo-style code comment",
+        "ubicacion": "Limpiar-Temp.ps1:8",
+        "extracto": "# En un entorno real, aquí iría la lógica de registro",
+        "peso": 8
+      },
+      {
+        "regla": "comentarios-paso",
+        "nivel": "debil",
+        "descripcion": "Numbered step comments («# Step 1:»)",
+        "ubicacion": "Limpiar-Temp.ps1:3",
+        "extracto": "3 step comments; e.g. # Paso 1: Obtener los ficheros temporales",
+        "peso": 3
+      },
+      {
+        "regla": "emoji-logs",
+        "nivel": "medio",
+        "descripcion": "Emojis in console or log messages",
+        "ubicacion": "Limpiar-Temp.ps1:10",
+        "extracto": "1 line; e.g. Write-Host \"✅ Limpieza completada\"",
+        "peso": 8
+      },
+      {
+        "regla": "valla-markdown",
+        "nivel": "fuerte",
+        "descripcion": "File wrapped in a Markdown fence (```) pasted from the chat",
+        "ubicacion": "Limpiar-Temp.ps1:2",
+        "extracto": "```powershell",
+        "peso": 20
+      },
+      {
+        "regla": "firma-generador",
+        "nivel": "explicito",
+        "descripcion": "AI tool signature in the content",
+        "ubicacion": "backup_manager.py:3",
+        "extracto": "\"\"\" Backup manager utility. Generated with Claude Code \"\"\" import os import shutil API_KEY =",
+        "peso": 40
+      },
+      {
+        "regla": "comentario-demo",
+        "nivel": "medio",
+        "descripcion": "Demo-style code comment",
+        "ubicacion": "backup_manager.py:47",
+        "extracto": "# In a real application, you would upload this to cloud storage",
+        "peso": 8
+      },
+      {
+        "regla": "placeholder",
+        "nivel": "medio",
+        "descripcion": "Example value left unreplaced",
+        "ubicacion": "backup_manager.py:8",
+        "extracto": "API_KEY = \"your_api_key_here\" # Replace with your actual API key",
+        "peso": 8
+      },
+      {
+        "regla": "comentarios-paso",
+        "nivel": "debil",
+        "descripcion": "Numbered step comments («# Step 1:»)",
+        "ubicacion": "backup_manager.py:22",
+        "extracto": "3 step comments; e.g. # Step 1: Validate input",
+        "peso": 3
+      },
+      {
+        "regla": "emoji-logs",
+        "nivel": "medio",
+        "descripcion": "Emojis in console or log messages",
+        "ubicacion": "backup_manager.py:24",
+        "extracto": "3 lines; e.g. print(\"❌ Source folder not found\")",
+        "peso": 8
+      },
+      {
+        "regla": "docstrings-uniformes",
+        "nivel": "debil",
+        "descripcion": "Args/Returns docstrings on almost every function",
+        "ubicacion": "backup_manager.py",
+        "extracto": "5 of 5 functions",
+        "peso": 3
+      },
+      {
+        "regla": "errores-genericos",
+        "nivel": "debil",
+        "descripcion": "Repeated generic error handling («An error occurred»)",
+        "ubicacion": "backup_manager.py",
+        "extracto": "3 blocks",
+        "peso": 3
+      }
+    ],
+    "resumen_por_marcador": {
+      "carpeta-agente": {
+        "nivel": "fuerte",
+        "veces": 1,
+        "puntos": 20.0,
+        "prevalencia": 1.0
+      },
+      "fichero-agente": {
+        "nivel": "fuerte",
+        "veces": 2,
+        "puntos": 30.0,
+        "prevalencia": 1.0
+      },
+      "resto-chat": {
+        "nivel": "fuerte",
+        "veces": 1,
+        "puntos": 20.0,
+        "prevalencia": 1.0
+      },
+      "comentario-demo": {
+        "nivel": "medio",
+        "veces": 2,
+        "puntos": 12.0,
+        "prevalencia": 1.0
+      },
+      "comentarios-paso": {
+        "nivel": "debil",
+        "veces": 2,
+        "puntos": 4.5,
+        "prevalencia": 1.0
+      },
+      "emoji-logs": {
+        "nivel": "medio",
+        "veces": 2,
+        "puntos": 12.0,
+        "prevalencia": 1.0
+      },
+      "valla-markdown": {
+        "nivel": "fuerte",
+        "veces": 1,
+        "puntos": 20.0,
+        "prevalencia": 1.0
+      },
+      "firma-generador": {
+        "nivel": "explicito",
+        "veces": 1,
+        "puntos": 40.0,
+        "prevalencia": 1.0
+      },
+      "placeholder": {
+        "nivel": "medio",
+        "veces": 1,
+        "puntos": 8.0,
+        "prevalencia": 1.0
+      },
+      "docstrings-uniformes": {
+        "nivel": "debil",
+        "veces": 1,
+        "puntos": 3.0,
+        "prevalencia": 1.0
+      },
+      "errores-genericos": {
+        "nivel": "debil",
+        "veces": 1,
+        "puntos": 3.0,
+        "prevalencia": 1.0
+      }
+    }
+  },
+  {
+    "objetivo": "tests/fixtures/texto/articulo_ia.md",
+    "tipo": "text",
+    "puntuacion": 72,
+    "valoracion": "High likelihood of AI generation or heavy AI assistance",
+    "atribucion_explicita": true,
+    "ficheros_analizados": 1,
+    "idioma": "en",
+    "notas": [],
+    "hallazgos": [
+      {
+        "regla": "utm-chatgpt",
+        "nivel": "explicito",
+        "descripcion": "Link copied from an AI assistant (utm_source=chatgpt.com…)",
+        "ubicacion": "articulo_ia.md:19",
+        "extracto": "a](https://www.incibe.es/guia?utm_source=chatgpt.com). Espero que te sea útil. ¿Quieres que",
+        "peso": 40
+      },
+      {
+        "regla": "cierre-chat",
+        "nivel": "fuerte",
+        "descripcion": "Typical chat-reply closing line",
+        "ubicacion": "articulo_ia.md:21",
+        "extracto": "uia?utm_source=chatgpt.com). Espero que te sea útil. ¿Quieres que añada una lista de verifi",
+        "peso": 20
+      },
+      {
+        "regla": "muletillas",
+        "nivel": "debil",
+        "descripcion": "High density of typical LLM stock phrases",
+        "ubicacion": "articulo_ia.md",
+        "extracto": "13 occurrences (41.8/1000 words): cabe destacar, desempeña un papel crucial, en definitiva, en el panorama actual, es importante señalar, fomentar, no solo a...",
+        "peso": 3
+      },
+      {
+        "regla": "vinetas-negrita",
+        "nivel": "debil",
+        "descripcion": "Systematic «**Term:** explanation» bullet points",
+        "ubicacion": "articulo_ia.md",
+        "extracto": "5 of 5 bullets",
+        "peso": 3
+      },
+      {
+        "regla": "emoji-titulos",
+        "nivel": "debil",
+        "descripcion": "Headings that start with an emoji",
+        "ubicacion": "articulo_ia.md",
+        "extracto": "4 headings",
+        "peso": 3
+      },
+      {
+        "regla": "ritmo-uniforme",
+        "nivel": "debil",
+        "descripcion": "Very uniform sentence length (low burstiness)",
+        "ubicacion": "articulo_ia.md",
+        "extracto": "22 sentences, mean 11.2 words, coefficient of variation 0.26",
+        "peso": 3
+      }
+    ],
+    "resumen_por_marcador": {
+      "utm-chatgpt": {
+        "nivel": "explicito",
+        "veces": 1,
+        "puntos": 40.0,
+        "prevalencia": 1.0
+      },
+      "cierre-chat": {
+        "nivel": "fuerte",
+        "veces": 1,
+        "puntos": 20.0,
+        "prevalencia": 1.0
+      },
+      "muletillas": {
+        "nivel": "debil",
+        "veces": 1,
+        "puntos": 3.0,
+        "prevalencia": 1.0
+      },
+      "vinetas-negrita": {
+        "nivel": "debil",
+        "veces": 1,
+        "puntos": 3.0,
+        "prevalencia": 1.0
+      },
+      "emoji-titulos": {
+        "nivel": "debil",
+        "veces": 1,
+        "puntos": 3.0,
+        "prevalencia": 1.0
+      },
+      "ritmo-uniforme": {
+        "nivel": "debil",
+        "veces": 1,
+        "puntos": 3.0,
+        "prevalencia": 1.0
+      }
+    }
+  },
+  {
+    "objetivo": "tests/fixtures/web/landing.html",
+    "tipo": "web page (HTML)",
+    "puntuacion": 93,
+    "valoracion": "High likelihood of AI generation or heavy AI assistance",
+    "atribucion_explicita": false,
+    "ficheros_analizados": 1,
+    "idioma": "en",
+    "notas": [
+      "landing.html: meta generator = «v0.app»"
+    ],
+    "hallazgos": [
+      {
+        "regla": "gen-lovable",
+        "nivel": "fuerte",
+        "descripcion": "Lovable fingerprint (data-lov-*, gptengineer, lovable-tagger)",
+        "ubicacion": "landing.html:2",
+        "extracto": "</title> <script src=\"https://cdn.gpteng.co/gptengineer.js\" type=\"module\"></script>",
+        "peso": 20
+      },
+      {
+        "regla": "gen-lovable",
+        "nivel": "fuerte",
+        "descripcion": "Lovable fingerprint (data-lov-*, gptengineer, lovable-tagger)",
+        "ubicacion": "landing.html:3",
+        "extracto": "\"></script></head> <body><div data-lov-id=\"src/pages/Index.tsx:12:4\" class=\"bg-gr",
+        "peso": 20
+      },
+      {
+        "regla": "gen-v0",
+        "nivel": "fuerte",
+        "descripcion": "v0 (Vercel) fingerprint",
+        "ubicacion": "landing.html:1",
+        "extracto": "\"><head><meta charset=\"utf-8\"><meta name=\"generator\" content=\"v0.app\"><title>Clínica Dental Sonrisa</title> <",
+        "peso": 20
+      },
+      {
+        "regla": "imagen-ia",
+        "nivel": "fuerte",
+        "descripcion": "Image named after an AI generator",
+        "ubicacion": "landing.html:5",
+        "extracto": "\">Reservar cita</button> <img src=\"/assets/ChatGPT Image 3 nov 2026, 10_12_45.png\" alt=\"equipo\"> <h1>Tu sonrisa, nuestra p",
+        "peso": 20
+      },
+      {
+        "regla": "stack-generador",
+        "nivel": "debil",
+        "descripcion": "Default stack of AI builders (shadcn/ui, lucide, gradients)",
+        "ubicacion": "landing.html",
+        "extracto": "3 of 3 traits present",
+        "peso": 3
+      },
+      {
+        "regla": "resto-chat",
+        "nivel": "fuerte",
+        "descripcion": "Chat phrase pasted into the file",
+        "ubicacion": "landing.html (visible text):4",
+        "extracto": "Tu sonrisa, nuestra prioridad Claro, aquí tienes el texto para la sección de bienvenida:",
+        "peso": 20
+      }
+    ],
+    "resumen_por_marcador": {
+      "gen-lovable": {
+        "nivel": "fuerte",
+        "veces": 2,
+        "puntos": 30.0,
+        "prevalencia": 1.0
+      },
+      "gen-v0": {
+        "nivel": "fuerte",
+        "veces": 1,
+        "puntos": 20.0,
+        "prevalencia": 1.0
+      },
+      "imagen-ia": {
+        "nivel": "fuerte",
+        "veces": 1,
+        "puntos": 20.0,
+        "prevalencia": 1.0
+      },
+      "stack-generador": {
+        "nivel": "debil",
+        "veces": 1,
+        "puntos": 3.0,
+        "prevalencia": 1.0
+      },
+      "resto-chat": {
+        "nivel": "fuerte",
+        "veces": 1,
+        "puntos": 20.0,
+        "prevalencia": 1.0
+      }
+    }
+  },
+  {
+    "objetivo": "tests/fixtures/imagenes/c2pa_ia.png",
+    "tipo": "image",
+    "puntuacion": 40,
+    "valoracion": "Likely AI assistance in part of the content",
+    "atribucion_explicita": true,
+    "ficheros_analizados": 1,
+    "idioma": "en",
+    "notas": [
+      "c2patool is not installed: C2PA signatures were not verified (brew install c2patool)."
+    ],
+    "hallazgos": [
+      {
+        "regla": "c2pa-ia",
+        "nivel": "explicito",
+        "descripcion": "C2PA Content Credentials declare AI generation",
+        "ubicacion": "c2pa_ia.png:C2PA",
+        "extracto": "source: AI-generated; tool: Prueba Generador IA 1.0; signer: C2PA Test Signing Cert (C2PA Signer); signature: not verified (install c2patool)",
+        "peso": 40
+      }
+    ],
+    "resumen_por_marcador": {
+      "c2pa-ia": {
+        "nivel": "explicito",
+        "veces": 1,
+        "puntos": 40.0,
+        "prevalencia": 1.0
+      }
+    }
+  },
+  {
+    "objetivo": "tests/fixtures/imagenes/sd_parametros.png",
+    "tipo": "image",
+    "puntuacion": 40,
+    "valoracion": "Likely AI assistance in part of the content",
+    "atribucion_explicita": true,
+    "ficheros_analizados": 1,
+    "idioma": "en",
+    "notas": [],
+    "hallazgos": [
+      {
+        "regla": "parametros-generacion",
+        "nivel": "explicito",
+        "descripcion": "Stable Diffusion/ComfyUI/InvokeAI generation parameters in the image",
+        "ubicacion": "sd_parametros.png:PNG «parameters»",
+        "extracto": "a lighthouse at dusk, oil painting Negative prompt: blurry Steps: 30, Sampler: DPM++ 2M Karras, CFG scale: 7, Seed: 12345, Size: 512x512, Model: sd_xl",
+        "peso": 40
+      }
+    ],
+    "resumen_por_marcador": {
+      "parametros-generacion": {
+        "nivel": "explicito",
+        "veces": 1,
+        "puntos": 40.0,
+        "prevalencia": 1.0
+      }
+    }
+  },
+  {
+    "objetivo": "tests/fixtures/imagenes/c2pa_camara.jpg",
+    "tipo": "image",
+    "puntuacion": 0,
+    "valoracion": "No relevant signs",
+    "atribucion_explicita": false,
+    "ficheros_analizados": 1,
+    "idioma": "en",
+    "notas": [
+      "c2patool is not installed: C2PA signatures were not verified (brew install c2patool).",
+      "c2pa_camara.jpg: C2PA credentials without an AI declaration (source: digital capture (camera); tool: Prueba Cámara 2.3; signer: C2PA Test Signing Cert (C2PA Signer); signature: not verified (install c2patool))."
+    ],
+    "hallazgos": [],
+    "resumen_por_marcador": {}
+  }
+]

@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   analizar:
-    name: Análisis CodeQL (Python y Actions)
+    name: CodeQL analysis (Python and Actions)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:

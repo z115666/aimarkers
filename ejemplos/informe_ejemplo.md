@@ -1,6 +1,6 @@
 # Informe de marcadores de IA
 
-Generado con aimarkers 1.0.0 el 10/11/2026 15:43.
+Generado con aimarkers 1.1.0 el 10/11/2026 20:27.
 
 > Los marcadores son indicios, no pruebas. Revisa cada evidencia antes de sacar conclusiones; la ausencia de marcadores tampoco demuestra autoría humana.
 
@@ -51,9 +51,9 @@ Generado con aimarkers 1.0.0 el 10/11/2026 15:43.
 
 | Nivel | Marcador | Veces | Ubicación | Evidencia |
 | --- | --- | --- | --- | --- |
-| Explícito | Enlace copiado desde ChatGPT (utm_source=chatgpt.com/openai) | 1 | `articulo_ia.md:19` | a](https://www.incibe.es/guia?utm_source=chatgpt.com). Espero que te sea útil. ¿Quieres que |
+| Explícito | Enlace copiado desde un asistente de IA (utm_source=chatgpt.com…) | 1 | `articulo_ia.md:19` | a](https://www.incibe.es/guia?utm_source=chatgpt.com). Espero que te sea útil. ¿Quieres que |
 | Fuerte | Cierre típico de respuesta de chat | 1 | `articulo_ia.md:21` | uia?utm_source=chatgpt.com). Espero que te sea útil. ¿Quieres que añada una lista de verifi |
-| Débil | Densidad alta de muletillas típicas de LLM | 1 | `articulo_ia.md` | 13 apariciones (41.8/1000 palabras): cabe destacar, desempeña un papel crucial, en definitiva, en el panorama actual, es importante señal... |
+| Débil | Densidad alta de muletillas típicas de LLM | 1 | `articulo_ia.md` | 13 apariciones (41.8/1000 palabras): cabe destacar, desempeña un papel crucial, en definitiva, en el panorama actual, es importante señalar, fomentar, no sol... |
 | Débil | Viñetas con «**Término:** explicación» de forma sistemática | 1 | `articulo_ia.md` | 5 de 5 viñetas |
 | Débil | Títulos que empiezan con emoji | 1 | `articulo_ia.md` | 4 títulos |
 | Débil | Frases de longitud muy uniforme (baja burstiness) | 1 | `articulo_ia.md` | 22 frases, media 11.2 palabras, coef. de variación 0.26 |
@@ -77,3 +77,43 @@ Generado con aimarkers 1.0.0 el 10/11/2026 15:43.
 **Notas**
 
 - landing.html: meta generator = «v0.app»
+
+## tests/fixtures/imagenes/c2pa_ia.png
+
+- **Tipo:** imagen
+- **Ficheros analizados:** 1
+- **Puntuación:** 40/100 — Probable asistencia de IA en parte del contenido
+- **Atribución explícita:** sí
+
+| Nivel | Marcador | Veces | Ubicación | Evidencia |
+| --- | --- | --- | --- | --- |
+| Explícito | Credenciales de contenido C2PA declaran generación con IA | 1 | `c2pa_ia.png:C2PA` | origen: generada con IA; herramienta: Prueba Generador IA 1.0; firmante: C2PA Test Signing Cert (C2PA Signer); firma: no verificada (instala c2patool) |
+
+**Notas**
+
+- c2patool no está instalado: las firmas C2PA no se han verificado (brew install c2patool).
+
+## tests/fixtures/imagenes/sd_parametros.png
+
+- **Tipo:** imagen
+- **Ficheros analizados:** 1
+- **Puntuación:** 40/100 — Probable asistencia de IA en parte del contenido
+- **Atribución explícita:** sí
+
+| Nivel | Marcador | Veces | Ubicación | Evidencia |
+| --- | --- | --- | --- | --- |
+| Explícito | Parámetros de generación de Stable Diffusion/ComfyUI/InvokeAI en la imagen | 1 | `sd_parametros.png:PNG «parameters»` | a lighthouse at dusk, oil painting Negative prompt: blurry Steps: 30, Sampler: DPM++ 2M Karras, CFG scale: 7, Seed: 12345, Size: 512x512, Model: sd_xl |
+
+## tests/fixtures/imagenes/c2pa_camara.jpg
+
+- **Tipo:** imagen
+- **Ficheros analizados:** 1
+- **Puntuación:** 0/100 — Sin indicios relevantes
+- **Atribución explícita:** no
+
+No se han encontrado marcadores.
+
+**Notas**
+
+- c2patool no está instalado: las firmas C2PA no se han verificado (brew install c2patool).
+- c2pa_camara.jpg: credenciales C2PA sin declaración de IA (origen: captura digital (cámara); herramienta: Prueba Cámara 2.3; firmante: C2PA Test Signing Cert (C2PA Signer); firma: no verificada (instala c2patool)).

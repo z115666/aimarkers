@@ -1,38 +1,44 @@
-# Política de seguridad
+# Security policy
 
-## Versiones con soporte
+**English** · [Español](SECURITY.es.md)
 
-| Versión | Soporte |
+## Supported versions
+
+| Version | Supported |
 | --- | --- |
-| 1.x | Sí |
+| 1.1.x | Yes |
+| 1.0.x | No: upgrade to 1.1 |
 
-## Cómo informar de una vulnerabilidad
+## Reporting a vulnerability
 
-No abras un *issue* público. Usa **[Report a vulnerability](../../security/advisories/new)** en la pestaña *Security* del repositorio (aviso privado de GitHub).
+Do not open a public issue. Use **[Report a vulnerability](../../security/advisories/new)** in the repository's *Security* tab (private GitHub advisory).
 
-Incluye la versión, el sistema operativo, los pasos para reproducirlo y, si puedes, un fichero o repositorio mínimo de ejemplo. Respondo en un plazo de 7 días y publico la corrección con un aviso de seguridad cuando proceda.
+Include the version, operating system, steps to reproduce and, if possible, a minimal sample file or repository. I reply within 7 days and publish the fix with a security advisory where appropriate.
 
-## Modelo de amenazas
+## Threat model
 
-aimarkers está pensado para analizar contenido **no confiable**: repositorios, webs o ficheros de terceros. Estas son las medidas que aplica:
+aimarkers is meant to analyse **untrusted** content: third-party repositories, websites, images or files. These are the measures it applies:
 
-| Riesgo | Medida |
+| Risk | Measure |
 | --- | --- |
-| Ejecución de comandos al analizar un repositorio Git manipulado (`core.fsmonitor`, hooks, `diff.external`, `textconv` en `.git/config` o `.gitattributes`) | `git` se invoca sin shell, con argumentos en lista y con `-c core.fsmonitor=false -c core.hooksPath=/dev/null -c diff.external=`, `--no-ext-diff`, `--no-textconv` y `GIT_CONFIG_NOSYSTEM=1`. Cubierto por una prueba manual con un repositorio hostil |
-| Denegación de servicio por expresiones regulares (ReDoS) | Cuantificadores acotados en las reglas que recorren atributos HTML; probado con entradas de 200 KB |
-| Ficheros enormes o binarios | Límite de 3 MB por fichero, detección de binarios y omisión de código minificado |
-| Enlaces simbólicos que apuntan fuera del proyecto | No se siguen |
-| Descarga de URLs | Solo `http`/`https`, también tras redirecciones; tiempo máximo de espera y límite de tamaño |
-| Inyección en los informes | El informe HTML escapa todo el contenido analizado; el Markdown escapa HTML y barras verticales |
-| Cadena de suministro | Sin dependencias en tiempo de ejecución (solo biblioteca estándar). Acciones de GitHub fijadas por hash de commit y herramientas de desarrollo instaladas con `--require-hashes` |
+| Command execution when analysing a tampered Git repository (`core.fsmonitor`, hooks, `diff.external`, `textconv` in `.git/config` or `.gitattributes`) | `git` runs without a shell, with list arguments and with `-c core.fsmonitor=false -c core.hooksPath=/dev/null -c diff.external=`, `--no-ext-diff`, `--no-textconv` and `GIT_CONFIG_NOSYSTEM=1`. Checked against a hostile repository |
+| Regular expression denial of service (ReDoS) | Bounded quantifiers in the rules that scan HTML attributes and metadata |
+| Crafted images: decompression bombs, boxes with fake lengths, endlessly nested CBOR | `zTXt`/`iTXt` decompression limited to 2 MB; every JUMBF/ISO BMFF box is validated against the buffer bounds; the CBOR decoder limits depth (64) and element count; DER is only walked within its bounds. Tested with bombs, malformed boxes and randomly corrupted images |
+| Huge or binary files | 3 MB limit per text file and 50 MB per image, binary detection and minified code skipped |
+| Symbolic links pointing outside the project | Not followed |
+| Images in a local HTML file pointing outside its folder (`../`) | Discarded: only files inside the HTML file's folder are read |
+| Downloading URLs and images | `http`/`https` only, including after redirects; timeouts; at most 15 images of 15 MB, in a temporary folder deleted afterwards |
+| `c2patool` | Located on the PATH with `shutil.which`, run by absolute path, without a shell, with list arguments and a 60 s timeout. It is optional |
+| Report injection | The HTML report escapes all analysed content and contains no scripts; Markdown escapes HTML and pipes |
+| Supply chain | No runtime dependencies (standard library only). GitHub Actions pinned by commit hash and development tools installed with `--require-hashes`. The Homebrew formula points to a specific commit with its SHA-256 |
 
-## Controles en el ciclo de desarrollo
+## Development lifecycle controls
 
-- **CI** en cada *push* y *pull request*: ruff (incluye reglas de seguridad `S`), bandit y pruebas unitarias en Linux, macOS y Windows con Python 3.9 y la última estable.
-- **CodeQL** con la batería `security-extended` para Python y para los propios workflows, en cada cambio y cada semana.
-- **Dependabot** para las acciones de GitHub y las herramientas de desarrollo.
-- **Mínimo privilegio** en los workflows: permisos de solo lectura salvo la subida de resultados de CodeQL, y `persist-credentials: false`.
+- **CI** on every push and pull request: ruff (including the `S` security rules), bandit and unit tests on Linux, macOS and Windows with Python 3.9 and the latest stable release.
+- **CodeQL** with the `security-extended` suite for Python and for the workflows themselves, on every change and weekly.
+- **Dependabot** for GitHub Actions and development tools.
+- **Least privilege** in workflows: read-only permissions except for uploading CodeQL results, and `persist-credentials: false`.
 
-## Privacidad
+## Privacy
 
-aimarkers no envía datos a ningún sitio salvo la URL que le pidas analizar (y su `/llms.txt`). Los informes pueden contener extractos del contenido analizado: trátalos con la misma confidencialidad que el original. Por eso `.gitignore` excluye los informes generados.
+aimarkers sends no data anywhere except to the URL you ask it to analyse, its images and its `/llms.txt`. Use `--no-images` if you do not want images downloaded. Reports may contain excerpts of the analysed content, including prompts stored in images: treat them as confidentially as the original. That is why `.gitignore` excludes generated reports.

@@ -1,4 +1,8 @@
-"""Pruebas de aimarkers. Ejecutar con: python -m unittest discover tests -v"""
+"""Pruebas de aimarkers / aimarkers tests. Ejecutar / run: python -m unittest discover tests -v"""
+import json
+import os
+import random
+import re
 import shutil
 import subprocess
 import sys
@@ -11,6 +15,8 @@ sys.path.insert(0, str(RAIZ.parent))
 import aimarkers
 
 F = RAIZ / "fixtures"
+IMG = F / "imagenes"
+aimarkers.fijar_idioma("es")
 
 
 def reglas(res):
@@ -82,7 +88,7 @@ class PruebasAimarkers(unittest.TestCase):
         self.assertLess(res.puntuacion(), 15)
 
     def test_hueco_no_confunde_codigo(self):
-        res = aimarkers.Resultado("x", "código")
+        res = aimarkers.Resultado("x", "codigo")
         aimarkers.analizar_codigo(res, "params[name] = value\nhandlers[Name] = h\n" * 10, "x.py", ".py")
         self.assertNotIn("hueco-plantilla", reglas(res))
 
@@ -101,6 +107,106 @@ class PruebasAimarkers(unittest.TestCase):
                 self.assertGreater((salida / nombre).stat().st_size, 200)
             # El HTML escapa el contenido analizado
             self.assertNotIn("<script", (salida / "r.html").read_text(encoding="utf-8").lower())
+
+
+class PruebasImagenes(unittest.TestCase):
+    def test_c2pa_generada_con_ia(self):
+        for nombre in ("c2pa_ia.jpg", "c2pa_ia.png"):
+            res = aimarkers.analizar_objetivo(str(IMG / nombre))
+            self.assertIn("c2pa-ia", reglas(res), nombre)
+            self.assertTrue(res.atribucion_explicita())
+            self.assertIn("Prueba Generador IA", res.hallazgos[0].extracto)
+            self.assertIn("C2PA Signer", res.hallazgos[0].extracto)
+
+    def test_c2pa_camara_solo_nota(self):
+        res = aimarkers.analizar_objetivo(str(IMG / "c2pa_camara.jpg"))
+        self.assertEqual(res.hallazgos, [])
+        self.assertTrue(any("C2PA" in n and "cámara" in n for n in res.notas))
+
+    def test_parametros_y_metadatos(self):
+        casos = {"sd_parametros.png": "parametros-generacion", "comfyui.png": "parametros-generacion",
+                 "xmp_ia.jpg": "xmp-origen-ia", "exif_software.jpg": "metadatos-generador"}
+        for nombre, regla in casos.items():
+            self.assertIn(regla, reglas(aimarkers.analizar_objetivo(str(IMG / nombre))), nombre)
+
+    def test_foto_normal_sin_hallazgos(self):
+        self.assertEqual(aimarkers.analizar_objetivo(str(IMG / "foto_normal.jpg")).hallazgos, [])
+
+    def test_entradas_hostiles(self):
+        # zTXt con bomba de descompresión y caja JUMBF malformada
+        res = aimarkers.analizar_objetivo(str(IMG / "hostil.png"))
+        self.assertEqual(res.hallazgos, [])
+        base = (IMG / "c2pa_ia.jpg").read_bytes()
+        azar = random.Random(7)
+        for _ in range(150):
+            datos = bytearray(base)
+            for _ in range(20):
+                datos[azar.randrange(len(datos))] = azar.randrange(256)
+            corte = azar.randrange(len(datos))
+            aimarkers.analizar_imagen(aimarkers.Resultado("x", "imagen"), bytes(datos[:corte]), "x", None, set())
+        for basura in (b"\xbf" * 5000, b"\x9f" * 5000, b"\x5b\xff\xff\xff\xff", b"\xd8\x12" * 100):
+            aimarkers.decodificar_cbor(basura)
+
+    def test_imagenes_de_html_local_sin_salir_de_la_carpeta(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            raiz = Path(tmp)
+            (raiz / "web" / "img").mkdir(parents=True)
+            shutil.copy(IMG / "c2pa_ia.jpg", raiz / "web" / "img" / "foto.jpg")
+            shutil.copy(IMG / "sd_parametros.png", raiz / "fuera.png")
+            (raiz / "web" / "index.html").write_text(
+                '<html><body><img src="img/foto.jpg"><img src="../fuera.png">'
+                '<img src="https://example.com/x.png"></body></html>', encoding="utf-8")
+            res = aimarkers.analizar_objetivo(str(raiz / "web" / "index.html"))
+            sin = aimarkers.analizar_objetivo(str(raiz / "web" / "index.html"), imagenes_web=False)
+        self.assertIn("c2pa-ia", reglas(res))
+        self.assertNotIn("parametros-generacion", reglas(res))
+        self.assertNotIn("c2pa-ia", reglas(sin))
+
+    def test_falsos_positivos_imagen(self):
+        self.assertIsNone(aimarkers.RE_GENERADOR_META.search("Imagen corporativa de la empresa"))
+        self.assertIsNone(aimarkers.RE_GENERADOR_META.search("Canon EOS R6 / Adobe Lightroom"))
+
+
+class PruebasIdioma(unittest.TestCase):
+    def tearDown(self):
+        aimarkers.fijar_idioma("es")
+
+    def test_deteccion(self):
+        original = dict(os.environ)
+        try:
+            for var in ("AIMARKERS_LANG", "LC_ALL", "LC_MESSAGES", "LANG", "LANGUAGE"):
+                os.environ.pop(var, None)
+            os.environ["LANG"] = "es_ES.UTF-8"
+            self.assertEqual(aimarkers.detectar_idioma(), "es")
+            os.environ["LANG"] = "en_GB.UTF-8"
+            self.assertEqual(aimarkers.detectar_idioma(), "en")
+            os.environ["AIMARKERS_LANG"] = "es"
+            self.assertEqual(aimarkers.detectar_idioma(), "es")
+        finally:
+            os.environ.clear()
+            os.environ.update(original)
+
+    def test_traducciones_completas(self):
+        for clave, (es, en) in {**aimarkers.TEXTOS, **aimarkers.DESCRIPCIONES}.items():
+            self.assertTrue(es and en, clave)
+            self.assertEqual(set(re.findall(r"{(\w+)}", es)),
+                             set(re.findall(r"{(\w+)}", en)), clave)
+        reglas_usadas = {r[0] for r in aimarkers.REGLAS_GENERALES + aimarkers.REGLAS_CHAT + aimarkers.REGLAS_HTML
+                         + aimarkers.REGLAS_CODIGO_LINEA + [aimarkers.REGLA_HUECO]}
+        self.assertLessEqual(reglas_usadas, set(aimarkers.DESCRIPCIONES))
+
+    def test_informes_en_ingles(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            salida = Path(tmp)
+            aimarkers.main([str(IMG / "c2pa_ia.jpg"), "--lang", "en", "--quiet",
+                            "--json", str(salida / "r.json"), "--html", str(salida / "r.html")])
+            datos = json.loads((salida / "r.json").read_text(encoding="utf-8"))
+            pagina = (salida / "r.html").read_text(encoding="utf-8")
+        self.assertEqual(datos[0]["idioma"], "en")
+        self.assertEqual(datos[0]["hallazgos"][0]["regla"], "c2pa-ia")
+        self.assertIn("C2PA Content Credentials declare AI generation", datos[0]["hallazgos"][0]["descripcion"])
+        self.assertIn('<html lang="en">', pagina)
+        self.assertIn("AI markers report", pagina)
 
 
 if __name__ == "__main__":
