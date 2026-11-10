@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+dist/
+build/
+*.egg-info/
+
+# Informes generados (pueden contener extractos de código ajeno)
+informe*.html
+informe*.md
+informe*.json
+!ejemplos/informe_ejemplo.*
+
+# Sistema
+.DS_Store
+Thumbs.db
