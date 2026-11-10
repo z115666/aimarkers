@@ -28,7 +28,7 @@ aimarkers está pensado para analizar contenido **no confiable**: repositorios, 
 
 ## Controles en el ciclo de desarrollo
 
-- **CI** en cada *push* y *pull request*: ruff (incluye reglas de seguridad `S`), bandit y pruebas unitarias en Linux, macOS y Windows con Python 3.9 y 3.13.
+- **CI** en cada *push* y *pull request*: ruff (incluye reglas de seguridad `S`), bandit y pruebas unitarias en Linux, macOS y Windows con Python 3.9 y la última estable.
 - **CodeQL** con la batería `security-extended` para Python y para los propios workflows, en cada cambio y cada semana.
 - **Dependabot** para las acciones de GitHub y las herramientas de desarrollo.
 - **Mínimo privilegio** en los workflows: permisos de solo lectura salvo la subida de resultados de CodeQL, y `persist-credentials: false`.
