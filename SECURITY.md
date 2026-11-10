@@ -37,7 +37,7 @@ aimarkers is meant to analyse **untrusted** content: third-party repositories, w
 ## Development lifecycle controls
 
 - **CI** on every push and pull request: ruff (including the `S` security rules), bandit and unit tests on Linux, macOS and Windows with Python 3.9 and the latest stable release.
-- **CodeQL** with the `security-extended` suite for Python and for the workflows themselves, on every change and weekly.
+- **CodeQL** with the `security-extended` suite for Python, the interface JavaScript and the workflows themselves, on every change and weekly.
 - **Dependabot** for GitHub Actions and development tools.
 - **Least privilege** in workflows: read-only permissions except for uploading CodeQL results, and `persist-credentials: false`.
 
