@@ -33,7 +33,50 @@ cd aimarkers
 python3 aimarkers.py --version
 ```
 
-Requirements: Python 3.9 or later and, to analyse history, `git` on the PATH. It only uses the standard library, so there are no dependencies to install. On Windows use `py` instead of `python3`. [`c2patool`](https://github.com/contentauth/c2pa-rs/tree/main/cli) is optional and only needed to verify C2PA signatures.
+Requirements: Python 3.9 or later and, to analyse history, `git` on the PATH. It only uses the standard library, so there are no dependencies to install. On Windows, see the next section. [`c2patool`](https://github.com/contentauth/c2pa-rs/tree/main/cli) is optional and only needed to verify C2PA signatures.
+
+### Windows
+
+1. Install Python and Git (PowerShell). When the Python installer asks, tick **Add python.exe to PATH**; with `winget` this is done for you:
+
+   ```powershell
+   winget install --id Python.Python.3.13 -e
+   winget install --id Git.Git -e
+   ```
+
+   Close and reopen PowerShell, then check: `py --version` and `git --version`.
+
+2. Download aimarkers into a folder of your choice:
+
+   ```powershell
+   cd $HOME
+   git clone https://github.com/z115666/aimarkers.git
+   cd aimarkers
+   py aimarkers.py --version
+   ```
+
+   Without Git: on the repository page use **Code → Download ZIP**, extract it and open PowerShell in that folder.
+
+3. Use it with `py` instead of `python3`, and Windows paths:
+
+   ```powershell
+   py aimarkers.py C:\Repos\my-project
+   py aimarkers.py "$HOME\Downloads\image.png" --lang en
+   py aimarkers.py https://example.com --html "$HOME\Desktop\report.html"
+   start "$HOME\Desktop\report.html"
+   ```
+
+4. Optional: an `aimarkers` command in every PowerShell session. Add this line to your profile (`notepad $PROFILE`, create the file if it asks):
+
+   ```powershell
+   function aimarkers { py "$HOME\aimarkers\aimarkers.py" @args }
+   ```
+
+   If PowerShell refuses to load the profile, run once: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
+
+5. Optional, to verify C2PA signatures: download the Windows build of `c2patool` (`c2patool-…-x86_64-pc-windows-msvc.zip`) from the [c2pa-rs releases](https://github.com/contentauth/c2pa-rs/releases), extract `c2patool.exe` into a folder on your PATH, and check it with `c2patool --version`.
+
+To update: `cd $HOME\aimarkers` and `git pull`. Colours work in Windows Terminal and in the classic console; use `--no-color` if you see odd characters. To fix the language: `$env:AIMARKERS_LANG = "en"` (session) or `setx AIMARKERS_LANG en` (permanent).
 
 ## Usage
 
