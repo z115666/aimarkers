@@ -4,6 +4,15 @@
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [semantic versioning](https://semver.org/).
 
+## [1.2.0] - 2026-11-10
+
+### Added
+- Graphical interface (`--gui`) that runs locally in the browser: drag and drop of files and folders, system file picker, session history, light and dark appearance, English and Spanish, report export. Fonts: Redaction and Martian Mono (SIL OFL 1.1), bundled.
+- `--port` and `--no-browser` options.
+
+### Security
+- The interface server listens only on 127.0.0.1 with a random 256-bit token, `Host`/`Origin` checks, strict CSP, upload limits and path sanitising. Covered by tests.
+
 ## [1.1.0] - 2026-11-10
 
 ### Added

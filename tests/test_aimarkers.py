@@ -1,4 +1,5 @@
 """Pruebas de aimarkers / aimarkers tests. Ejecutar / run: python -m unittest discover tests -v"""
+import http.client
 import json
 import os
 import random
@@ -7,7 +8,9 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 import unittest
+import urllib.parse
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent
@@ -207,6 +210,93 @@ class PruebasIdioma(unittest.TestCase):
         self.assertIn("C2PA Content Credentials declare AI generation", datos[0]["hallazgos"][0]["descripcion"])
         self.assertIn('<html lang="en">', pagina)
         self.assertIn("AI markers report", pagina)
+
+
+class PruebasInterfaz(unittest.TestCase):
+    """Servidor local de la interfaz: debe rechazar todo lo que no venga de su propia página."""
+
+    @classmethod
+    def setUpClass(cls):
+        import aimarkers_gui
+        cls.gui = aimarkers_gui
+        cls.servidor = aimarkers_gui.crear_servidor(0)
+        cls.hilo = threading.Thread(target=cls.servidor.serve_forever, daemon=True)
+        cls.hilo.start()
+        cls.puerto = aimarkers_gui.ESTADO.puerto
+        cls.token = aimarkers_gui.ESTADO.token
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.servidor.shutdown()
+        cls.servidor.server_close()
+        aimarkers.fijar_idioma("es")
+
+    def peticion(self, metodo, ruta, cuerpo=None, cabeceras=None, token=True):
+        conexion = http.client.HTTPConnection("127.0.0.1", self.puerto, timeout=30)
+        todas = {"Host": f"127.0.0.1:{self.puerto}"}
+        if token:
+            todas["X-Aimarkers-Token"] = self.token
+        todas.update(cabeceras or {})
+        if isinstance(cuerpo, dict):
+            cuerpo = json.dumps(cuerpo).encode()
+        conexion.request(metodo, ruta, body=cuerpo, headers=todas)
+        respuesta = conexion.getresponse()
+        datos = respuesta.read()
+        conexion.close()
+        return respuesta.status, dict(respuesta.getheaders()), datos
+
+    def test_pagina_con_cabeceras_de_seguridad(self):
+        estado, cabeceras, cuerpo = self.peticion("GET", "/", token=False)
+        self.assertEqual(estado, 200)
+        self.assertIn("script-src 'self'", cabeceras["Content-Security-Policy"])
+        self.assertIn("frame-ancestors 'none'", cabeceras["Content-Security-Policy"])
+        self.assertEqual(cabeceras["X-Content-Type-Options"], "nosniff")
+        self.assertNotIn(b"<script>", cuerpo)
+        for ruta in ("/app.js", "/app.css", "/icon.svg", "/fonts/redaction-700.woff2"):
+            self.assertEqual(self.peticion("GET", ruta, token=False)[0], 200, ruta)
+
+    def test_rechaza_sin_token_host_u_origen(self):
+        self.assertEqual(self.peticion("GET", "/api/config", token=False)[0], 403)
+        self.assertEqual(self.peticion("POST", "/api/analyze", {"objetivo": "."}, token=False)[0], 403)
+        self.assertEqual(self.peticion("GET", "/", cabeceras={"Host": "atacante.example:80"})[0], 421)
+        self.assertEqual(self.peticion("POST", "/api/analyze", {"objetivo": "."},
+                                       cabeceras={"Origin": "https://atacante.example"})[0], 403)
+        self.assertEqual(self.peticion("GET", "/../aimarkers.py", token=False)[0], 404)
+
+    def test_analiza_y_exporta(self):
+        estado, _, cuerpo = self.peticion("POST", "/api/analyze",
+                                          {"objetivo": str(IMG / "c2pa_ia.jpg"), "idioma": "en"})
+        self.assertEqual(estado, 200)
+        datos = json.loads(cuerpo)
+        resultado = datos["resultados"][0]
+        self.assertEqual(resultado["banda"], "media")
+        self.assertEqual(resultado["grupos"][0]["marcadores"][0]["regla"], "c2pa-ia")
+        estado, cabeceras, informe = self.peticion("POST", "/api/export", {"id": datos["id"], "formato": "html"})
+        self.assertEqual(estado, 200)
+        self.assertIn("attachment", cabeceras["Content-Disposition"])
+        self.assertIn(b"<!doctype html>", informe)
+
+    def test_subida_y_rutas_hostiles(self):
+        lote = "pruebalote01"
+        datos = (IMG / "sd_parametros.png").read_bytes()
+        for ruta in ("../fuera.png", "/etc/passwd", "C:/x.png", "a/../../b.png", ""):
+            estado, _, _ = self.peticion("POST", f"/api/upload?batch={lote}&path={urllib.parse.quote(ruta)}", datos,
+                                         {"Content-Type": "application/octet-stream"})
+            self.assertEqual(estado, 400, ruta)
+        self.assertEqual(self.peticion("POST", "/api/upload?batch=x&path=a.png", datos)[0], 400)
+        estado, _, _ = self.peticion("POST", f"/api/upload?batch={lote}&path=carpeta/sd.png", datos,
+                                     {"Content-Type": "application/octet-stream"})
+        self.assertEqual(estado, 200)
+        estado, _, cuerpo = self.peticion("POST", "/api/analyze", {"lote": lote, "nombre": "carpeta", "idioma": "es"})
+        self.assertEqual(estado, 200)
+        resultado = json.loads(cuerpo)["resultados"][0]
+        self.assertEqual(resultado["objetivo"], "carpeta")
+        self.assertIn("parametros-generacion", resultado["resumen_por_marcador"])
+
+    def test_ruta_relativa_segura(self):
+        self.assertEqual(str(self.gui.ruta_relativa_segura("a/./b\\c.txt")), "a/b/c.txt")
+        for mala in ("..", "../a", "a/../../b", "", "\x00", "C:\\a"):
+            self.assertIsNone(self.gui.ruta_relativa_segura(mala), mala)
 
 
 if __name__ == "__main__":

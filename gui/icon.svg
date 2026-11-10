@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <defs>
+    <symbol id="lupa" viewBox="0 0 32 32">
+      <circle cx="13.5" cy="13.5" r="8.5" fill="none" stroke="currentColor" stroke-width="2.4"/>
+      <path d="M20 20l7.5 7.5" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+      <path d="M9.5 14.5h2.2M13 11v6M15.8 12.5h1.8" stroke="#a593ff" stroke-width="2" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="auto" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.8"/>
+      <path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/>
+    </symbol>
+    <symbol id="sol" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.8"/>
+      <path d="M12 2.5v2.3M12 19.2v2.3M2.5 12h2.3M19.2 12h2.3M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="luna" viewBox="0 0 24 24">
+      <path d="M19.5 14.6A8 8 0 0 1 9.4 4.5a8 8 0 1 0 10.1 10.1z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+    </symbol>
+  </defs>
+  <rect width="32" height="32" rx="8" fill="#1d1830"/>
+  <use href="#lupa" x="2" y="2" width="28" height="28" color="#efeaff"/>
+</svg>

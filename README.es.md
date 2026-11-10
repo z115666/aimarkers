@@ -126,8 +126,25 @@ El idioma afecta a la consola y a los informes. Los identificadores de los marca
 | `--sin-imagenes` | No analiza las imágenes enlazadas desde las webs |
 | `--silencioso` | No imprime el informe en consola |
 | `--sin-color` | Consola sin colores |
+| `--gui` | Abre la interfaz gráfica (ver más abajo) |
 
 Cada opción tiene también su nombre en inglés: `--evidence`, `--threshold`, `--no-images`, `--quiet`, `--no-color`.
+
+## Interfaz gráfica
+
+Para quien prefiera no usar la terminal, aimarkers incluye una interfaz gráfica que funciona entera en tu equipo:
+
+```bash
+aimarkers --gui                 # Homebrew
+python3 aimarkers.py --gui      # macOS / Linux desde la carpeta
+py aimarkers.py --gui           # Windows
+```
+
+Se abre en el navegador. Arrastra ficheros, carpetas o imágenes a la ventana, escribe una ruta o una URL, o usa **Elegir archivo** / **Elegir carpeta** (el selector del sistema). Cada análisis queda en la lista lateral durante la sesión y puedes guardar el informe en HTML, Markdown o JSON. Tiene apariencia clara y oscura (o la del sistema) y cambia entre español e inglés. Para cerrarla, pulsa Ctrl+C en la terminal.
+
+![Interfaz gráfica de aimarkers](docs/gui-light.png)
+
+Cómo se protege: solo escucha en `127.0.0.1` en un puerto aleatorio; cada petición necesita un token aleatorio de 256 bits que viaja en el fragmento de la URL; comprueba `Host` y `Origin` frente a DNS rebinding y otras webs; usa una política de seguridad de contenido estricta, sin scripts en línea ni recursos externos; los ficheros que sueltas van a una carpeta temporal (50 MB por fichero, 500 MB en total) que se borra al salir. Opciones: `--port N` y `--no-browser`.
 
 ## Cómo puntúa
 
@@ -214,6 +231,7 @@ Las reglas están al principio de `aimarkers.py`, en listas de tuplas `(id, nive
 - `REGLAS_CODIGO_LINEA`: línea a línea en código.
 - `REGLAS_HTML`: webs.
 - `RE_GENERADOR_META`: nombres de generadores en metadatos de imágenes.
+- `gui/`: interfaz gráfica (HTML, CSS y JavaScript sin dependencias) servida por `aimarkers_gui.py`.
 - `MULETILLAS_ES` / `MULETILLAS_EN`: frases típicas (solo cuentan por densidad).
 - `FICHEROS_AGENTE` / `DIRS_AGENTE`: nombres de ficheros y carpetas de agentes.
 

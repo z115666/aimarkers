@@ -126,8 +126,25 @@ The language applies to the console and the reports. Marker identifiers (`coauto
 | `--no-images` | Do not analyse images linked from web pages |
 | `--quiet` | Do not print the report to the console |
 | `--no-color` | Plain console output |
+| `--gui` | Open the graphical interface (see below) |
 
 Every option also has a Spanish name: `--evidencias`, `--umbral`, `--sin-imagenes`, `--silencioso`, `--sin-color`.
+
+## Graphical interface
+
+For those who prefer not to use the terminal, aimarkers includes a graphical interface that runs entirely on your computer:
+
+```bash
+aimarkers --gui                 # Homebrew
+python3 aimarkers.py --gui      # macOS / Linux from the folder
+py aimarkers.py --gui           # Windows
+```
+
+It opens in your browser. Drop files, folders or images onto the window, type a path or URL, or use **Choose file** / **Choose folder** (the system file picker). Each analysis stays in the side list for the session, and you can save the report as HTML, Markdown or JSON. It has light and dark appearance (or follows the system) and switches between English and Spanish. Press Ctrl+C in the terminal to close it.
+
+![aimarkers graphical interface](docs/gui-dark.png)
+
+How it is protected: it only listens on `127.0.0.1` on a random port; every request needs a random 256-bit token that travels in the URL fragment; it checks `Host` and `Origin` against DNS rebinding and other websites; it uses a strict Content Security Policy with no inline scripts or external resources; dropped files go to a temporary folder (50 MB per file, 500 MB in total) that is deleted on exit. Options: `--port N` and `--no-browser`.
 
 ## Scoring
 
@@ -214,6 +231,7 @@ The rules are at the top of `aimarkers.py`, in lists of `(id, level, pattern)` t
 - `REGLAS_CODIGO_LINEA`: line by line in code.
 - `REGLAS_HTML`: websites.
 - `RE_GENERADOR_META`: generator names in image metadata.
+- `gui/`: graphical interface (HTML, CSS and JavaScript with no dependencies) served by `aimarkers_gui.py`.
 - `MULETILLAS_ES` / `MULETILLAS_EN`: stock phrases (they only count by density).
 - `FICHEROS_AGENTE` / `DIRS_AGENTE`: agent file and folder names.
 

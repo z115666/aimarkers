@@ -6,6 +6,7 @@
 
 | Versión | Soporte |
 | --- | --- |
+| 1.2.x | Sí |
 | 1.1.x | Sí |
 | 1.0.x | No: actualiza a 1.1 |
 
@@ -29,6 +30,7 @@ aimarkers está pensado para analizar contenido **no confiable**: repositorios, 
 | Imágenes de un HTML local que apuntan fuera de su carpeta (`../`) | Se descartan: solo se leen ficheros dentro de la carpeta del HTML |
 | Descarga de URLs e imágenes | Solo `http`/`https`, también tras redirecciones; tiempo máximo de espera; como máximo 15 imágenes de 15 MB, en una carpeta temporal que se borra al terminar |
 | `c2patool` | Se busca en el PATH con `shutil.which`, se invoca con la ruta absoluta, sin shell, con argumentos en lista y con un tiempo máximo de 60 s. Es opcional |
+| Interfaz gráfica (`--gui`) atacada desde otra web o pestaña | Solo escucha en 127.0.0.1; token de 256 bits en el fragmento de la URL, exigido en una cabecera; comprobación de `Host` y `Origin` frente a DNS rebinding y CSRF; CSP estricta sin scripts en línea; ficheros estáticos de una lista cerrada; subidas limitadas y saneadas en una carpeta temporal que se borra al salir |
 | Inyección en los informes | El informe HTML escapa todo el contenido analizado y no contiene scripts; el Markdown escapa HTML y barras verticales |
 | Cadena de suministro | Sin dependencias en tiempo de ejecución (solo biblioteca estándar). Acciones de GitHub fijadas por hash de commit y herramientas de desarrollo instaladas con `--require-hashes`. La fórmula de Homebrew apunta a un commit concreto con su SHA-256 |
 

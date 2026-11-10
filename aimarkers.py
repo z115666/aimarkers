@@ -45,7 +45,7 @@ from datetime import datetime, timezone
 from html.parser import HTMLParser
 from pathlib import Path
 
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 
 # ---------------------------------------------------------------------------
 # Idioma / Language
@@ -209,6 +209,13 @@ TEXTOS: dict[str, tuple[str, str]] = {
     "cli.lang": ("Idioma de la salida: es o en (por defecto, el del sistema)",
                  "Output language: es or en (default: system language)"),
     "cli.fichero": ("FICHERO", "FILE"),
+    "cli.gui": ("Abrir la interfaz gráfica en el navegador (solo en este equipo)",
+                "Open the graphical interface in the browser (this computer only)"),
+    "cli.port": ("Puerto local de la interfaz gráfica (por defecto, uno libre al azar)",
+                 "Local port for the graphical interface (default: a random free one)"),
+    "cli.no_browser": ("No abrir el navegador automáticamente con --gui", "Do not open the browser automatically with --gui"),
+    "cli.sin_objetivos": ("indica al menos un fichero, carpeta o URL, o usa --gui",
+                          "give at least one file, folder or URL, or use --gui"),
 }
 
 DESCRIPCIONES: dict[str, tuple[str, str]] = {
@@ -1863,7 +1870,10 @@ def main(argv: list[str] | None = None) -> int:
     fichero = t("cli.fichero")
 
     ap = argparse.ArgumentParser(prog="aimarkers", description=t("cli.descripcion"))
-    ap.add_argument("objetivos", nargs="+", metavar="TARGET", help=t("cli.objetivos"))
+    ap.add_argument("objetivos", nargs="*", metavar="TARGET", help=t("cli.objetivos"))
+    ap.add_argument("--gui", action="store_true", help=t("cli.gui"))
+    ap.add_argument("--port", type=int, default=0, help=t("cli.port"))
+    ap.add_argument("--no-browser", dest="sin_navegador", action="store_true", help=t("cli.no_browser"))
     ap.add_argument("--json", metavar=fichero, help=t("cli.json"))
     ap.add_argument("--md", metavar=fichero, help=t("cli.md"))
     ap.add_argument("--html", metavar=fichero, help=t("cli.html"))
@@ -1875,6 +1885,15 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--umbral", "--threshold", dest="umbral", type=int, default=None, help=t("cli.umbral"))
     ap.add_argument("--version", action="version", version=f"aimarkers {VERSION}")
     args = ap.parse_args(argumentos)
+
+    if args.gui:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        sys.modules.setdefault("aimarkers", sys.modules[__name__])  # el GUI usa este mismo módulo
+        import aimarkers_gui
+        return aimarkers_gui.iniciar(args.port, abrir_navegador=not args.sin_navegador,
+                                     idioma_forzado=bool(args.lang or os.environ.get("AIMARKERS_LANG")))
+    if not args.objetivos:
+        ap.error(t("cli.sin_objetivos"))
 
     resultados = [analizar_objetivo(o, imagenes_web=not args.sin_imagenes) for o in args.objetivos]
 

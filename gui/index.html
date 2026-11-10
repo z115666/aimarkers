@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark light">
+<meta name="referrer" content="no-referrer">
+<title>aimarkers</title>
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="preload" href="/fonts/redaction-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/redaction-100-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/app.css">
+<script src="/app.js" defer></script>
+</head>
+<body>
+<a class="saltar" href="#banco" data-i18n="saltar">Ir al contenido</a>
+
+<header class="barra">
+  <div class="marca">
+    <svg class="marca-icono" viewBox="0 0 32 32" aria-hidden="true"><use href="/icon.svg#lupa"></use></svg>
+    <span class="marca-nombre">aimarkers</span>
+  </div>
+
+  <form id="formulario" class="buscador" autocomplete="off">
+    <label class="visualmente-oculto" for="objetivo" data-i18n="etiqueta-objetivo">Ruta o URL que quieres analizar</label>
+    <input id="objetivo" name="objetivo" type="text" spellcheck="false" data-i18n-placeholder="placeholder">
+    <button type="button" class="boton secundario" id="elegir-fichero" data-i18n="elegir-fichero">Elegir archivo</button>
+    <button type="button" class="boton secundario" id="elegir-carpeta" data-i18n="elegir-carpeta">Elegir carpeta</button>
+    <button type="submit" class="boton primario" id="analizar" data-i18n="analizar">Analizar</button>
+    <input id="selector-ficheros" type="file" multiple hidden>
+  </form>
+
+  <div class="ajustes">
+    <div class="segmentado" role="group" data-i18n-aria="idioma">
+      <button type="button" data-lang="es" aria-pressed="false">ES</button>
+      <button type="button" data-lang="en" aria-pressed="false">EN</button>
+    </div>
+    <button type="button" class="boton-icono" id="tema" data-i18n-aria="tema">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><use id="tema-uso" href="/icon.svg#auto"></use></svg>
+    </button>
+  </div>
+</header>
+
+<div class="app">
+  <aside class="casos" aria-labelledby="casos-titulo">
+    <h2 id="casos-titulo" data-i18n="casos">Casos de esta sesión</h2>
+    <ol id="lista-casos"></ol>
+    <p class="casos-vacio" id="casos-vacio" data-i18n="casos-vacio">Cada análisis queda aquí hasta que cierres aimarkers.</p>
+    <div class="estado-c2pa" id="estado-c2pa"></div>
+  </aside>
+
+  <main id="banco" class="banco" tabindex="-1">
+    <section id="vista-inicio" class="vista inicio">
+      <div class="zona" id="zona">
+        <h1 class="titular revelable" id="titular-inicio" data-i18n="titular">Saca a la luz lo que no se ve</h1>
+        <p class="entradilla" data-i18n="entradilla">Arrastra aquí ficheros, carpetas o imágenes, o escribe arriba una ruta o una URL. Todo se analiza en este equipo.</p>
+        <ul class="capacidades">
+          <li><strong data-i18n="cap-codigo-t">Código y textos</strong><span data-i18n="cap-codigo">Firmas de asistentes, restos de chat, muletillas y plantillas sin rellenar.</span></li>
+          <li><strong data-i18n="cap-imagen-t">Imágenes</strong><span data-i18n="cap-imagen">Credenciales C2PA, origen IPTC, EXIF y parámetros de Stable Diffusion o ComfyUI.</span></li>
+          <li><strong data-i18n="cap-repo-t">Repositorios y webs</strong><span data-i18n="cap-repo">Coautorías en commits, ramas de agentes, constructores web y cargas masivas de datos.</span></li>
+        </ul>
+        <label class="interruptor">
+          <input type="checkbox" id="imagenes-web" checked>
+          <span data-i18n="imagenes-web">Analizar también las imágenes de las webs</span>
+        </label>
+      </div>
+    </section>
+
+    <section id="vista-analizando" class="vista analizando" hidden aria-live="polite">
+      <p class="titular revelando" id="texto-analizando" data-i18n="analizando">Analizando</p>
+      <p class="progreso" id="progreso"></p>
+      <div class="haz" aria-hidden="true"></div>
+    </section>
+
+    <section id="vista-resultado" class="vista resultado" hidden>
+      <div class="cabecera-resultado">
+        <p class="objetivo-ruta" id="r-objetivo"></p>
+        <h1 class="titular veredicto revelable" id="r-veredicto"></h1>
+        <p class="meta" id="r-meta"></p>
+      </div>
+
+      <figure class="espectro" id="r-espectro">
+        <figcaption class="visualmente-oculto" id="r-espectro-texto"></figcaption>
+        <div class="espectro-cifra"><span id="r-puntos">0</span><small>/100</small></div>
+        <div class="espectro-barra" aria-hidden="true">
+          <span class="tramo nula"></span><span class="tramo baja"></span><span class="tramo media"></span><span class="tramo alta"></span>
+          <span class="espectro-marca" id="r-marca"></span>
+        </div>
+        <div class="espectro-escala" aria-hidden="true"><span>0</span><span>15</span><span>40</span><span>70</span><span>100</span></div>
+      </figure>
+
+      <p class="explicita" id="r-explicita" hidden data-i18n="explicita">El propio contenido declara una herramienta de IA.</p>
+
+      <div id="r-grupos" class="grupos"></div>
+      <p class="sin-hallazgos" id="r-vacio" hidden data-i18n="sin-hallazgos">No hay marcadores. Recuerda que su ausencia no demuestra autoría humana.</p>
+
+      <details class="notas" id="r-notas-bloque">
+        <summary id="r-notas-titulo"></summary>
+        <ul id="r-notas"></ul>
+      </details>
+
+      <div class="exportar">
+        <span data-i18n="exportar">Guardar el informe</span>
+        <button type="button" class="boton secundario" data-formato="html">HTML</button>
+        <button type="button" class="boton secundario" data-formato="md">Markdown</button>
+        <button type="button" class="boton secundario" data-formato="json">JSON</button>
+      </div>
+      <p class="aviso" data-i18n="aviso">Los marcadores son indicios, no pruebas. Revisa cada evidencia antes de sacar conclusiones.</p>
+    </section>
+  </main>
+</div>
+
+<div class="soltar" id="soltar" hidden aria-hidden="true"><p data-i18n="soltar">Suelta para analizar</p></div>
+<div class="aviso-flotante" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
