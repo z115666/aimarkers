@@ -4,6 +4,11 @@
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [semantic versioning](https://semver.org/).
 
+## [1.4.1] - 2026-11-11
+
+### Changed
+- Interface: content is centred on wide screens, with a side panel in the results showing the summary (AI score, highest CVSS, findings by risk), an index of the page that follows your scroll, and buttons to run the analysis again and save the report. Below 1280 px the panel is hidden and the layout stays in one column.
+
 ## [1.4.0] - 2026-11-11
 
 ### Added

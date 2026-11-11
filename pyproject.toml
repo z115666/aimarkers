@@ -1,6 +1,6 @@
 [project]
 name = "aimarkers"
-version = "1.4.0"
+version = "1.4.1"
 description = "AI markers analysis for code, documentation, websites, images and Git repositories"
 readme = "README.md"
 license = "MIT"

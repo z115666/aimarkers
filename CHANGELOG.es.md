@@ -4,6 +4,11 @@
 
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [1.4.1] - 2026-11-11
+
+### Cambiado
+- Interfaz: el contenido se centra en pantallas anchas y los resultados muestran un panel lateral con el resumen (puntuación de IA, CVSS máximo, hallazgos por riesgo), un índice de la página que sigue el desplazamiento y botones para repetir el análisis y guardar el informe. Por debajo de 1280 px el panel se oculta y la composición sigue en una columna.
+
 ## [1.4.0] - 2026-11-11
 
 ### Añadido

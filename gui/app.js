@@ -38,6 +38,9 @@ const TEXTOS = {
     "fase-scripts": "JavaScript del sitio", "fase-seguridad": "Cabeceras, cookies y contenido", "fase-dns": "Correo y DNS",
     "fase-activo": "Rutas sensibles (modo activo)", "fase-codigo": "Seguridad del código",
     "volver-inicio": "Volver al inicio",
+    "resumen": "Resumen", "resumen-analisis": "Resumen del análisis", "l-ia": "Marcadores de IA", "en-esta-pagina": "En esta página",
+    "repetir": "Repetir análisis", "i-resumen": "Veredicto", "i-ia": "Marcadores de IA", "i-seguridad": "Seguridad",
+    "i-categorias": "Categorías", "i-hallazgos": "Hallazgos", "i-componentes": "Componentes", "i-terceros": "Terceros", "i-notas": "Notas",
     "corto-fichero": "Archivo", "corto-carpeta": "Carpeta",
     "cap-seg-t": "Seguridad",
     "cap-seg": "OWASP Top 10, técnicas de MITRE ATT&CK, CVSS v4.0 y matriz de riesgos sobre la triada CID.",
@@ -137,6 +140,9 @@ const TEXTOS = {
     "fase-scripts": "Site JavaScript", "fase-seguridad": "Headers, cookies and content", "fase-dns": "Email and DNS",
     "fase-activo": "Sensitive paths (active mode)", "fase-codigo": "Code security",
     "volver-inicio": "Back to start",
+    "resumen": "Summary", "resumen-analisis": "Analysis summary", "l-ia": "AI markers", "en-esta-pagina": "On this page",
+    "repetir": "Run again", "i-resumen": "Verdict", "i-ia": "AI markers", "i-seguridad": "Security",
+    "i-categorias": "Categories", "i-hallazgos": "Findings", "i-componentes": "Components", "i-terceros": "Third parties", "i-notas": "Notes",
     "corto-fichero": "File", "corto-carpeta": "Folder",
     "cap-seg-t": "Security",
     "cap-seg": "OWASP Top 10, MITRE ATT&CK techniques, CVSS v4.0 and a risk matrix over the CIA triad.",
@@ -647,6 +653,7 @@ function pintarResultado(caso) {
   pintarUbicaciones(r);
   cambiarVistaIa(variasUbicaciones ? (estado.vistaIa || "nivel") : "nivel");
   pintarSeguridad(r.seguridad);
+  pintarLateral(r);
 
   const notas = $("r-notas");
   notas.replaceChildren(...r.notas.map((n) => el("li", null, n)));
@@ -906,6 +913,84 @@ function cambiarVistaIa(modo) {
   $("r-ubicaciones").hidden = soloSeg || modo !== "ubicacion";
 }
 
+
+// ---------- Panel lateral: resumen, índice de la página y acciones ----------
+let idsIndice = [];
+let destinoElegido = null; // sección pulsada en el índice, hasta que el usuario se desplace por su cuenta
+
+function pintarLateral(r) {
+  const soloSeg = Boolean(r.solo_seguridad && r.seguridad);
+  $("l-ia").hidden = soloSeg;
+  $("l-ia-valor").textContent = r.banda === "indeterminada" ? "?" : String(r.puntuacion);
+  $("l-ia").style.setProperty("--c", r.banda === "indeterminada" ? "var(--tinta-3)" : `var(--banda-${r.banda})`);
+  const seg = r.seguridad;
+  $("l-cvss").hidden = !seg;
+  const riesgos = $("l-riesgos");
+  riesgos.replaceChildren();
+  if (seg) {
+    $("l-cvss-valor").textContent = numero(seg.cvss_max);
+    $("l-cvss").style.setProperty("--c", { critical: "var(--explicito)", high: "var(--fuerte)", medium: "var(--medio)", low: "var(--debil)" }[seg.severidad_max] || "var(--tinta)");
+    for (const n of NIVELES_RIESGO) {
+      const total = seg.hallazgos.filter((h) => h.nivel_riesgo === n).length;
+      if (!total) continue;
+      const chip = el("span", "chip-riesgo", `${total} ${t("riesgo-" + n).toLowerCase()}`);
+      chip.dataset.riesgo = n;
+      riesgos.append(chip);
+    }
+  }
+  const entradas = [["r-cabecera", "i-resumen", ""]];
+  if (!soloSeg) entradas.push([r.grupos.length ? "r-grupos" : "r-vacio", "i-ia", r.hallazgos.length || ""]);
+  if (seg) {
+    entradas.push(["r-seguridad", "i-seguridad", ""]);
+    if (seg.categorias.length > 1) entradas.push(["seg-categorias", "i-categorias", seg.categorias.length]);
+    if (seg.hallazgos.length) entradas.push(["seg-grupos", "i-hallazgos", seg.hallazgos.length]);
+    if ((seg.inventario || []).length) entradas.push(["seg-inventario-bloque", "i-componentes", seg.inventario.length]);
+    if ((seg.terceros || []).length) entradas.push(["seg-terceros-bloque", "i-terceros", seg.terceros.length]);
+  }
+  if (r.notas.length) entradas.push(["r-notas-bloque", "i-notas", r.notas.length]);
+  const indice = $("l-indice");
+  indice.replaceChildren();
+  for (const [id, clave, cuenta] of entradas) {
+    const a = el("a");
+    a.href = "#" + id;
+    a.dataset.destino = id;
+    a.append(el("span", null, t(clave)), el("span", null, cuenta === "" ? "" : String(cuenta)));
+    a.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      const destino = $(id);
+      if (id === "r-notas-bloque") destino.open = true;
+      destinoElegido = id;
+      destino.scrollIntoView({ behavior: reducirMovimiento.matches ? "auto" : "smooth", block: "start" });
+    });
+    const li = el("li");
+    li.append(a);
+    indice.append(li);
+  }
+  // Marca la última sección cuyo inicio ya ha pasado bajo la barra superior
+  destinoElegido = null;
+  idsIndice = entradas.map(([id]) => id).filter((id) => $(id));
+  requestAnimationFrame(marcarIndice); // tras mostrar la vista, cuando ya hay medidas reales
+}
+
+function marcarIndice() {
+  if (!idsIndice.length) return;
+  let actual = idsIndice[0];
+  if (destinoElegido) actual = destinoElegido;
+  else {
+    for (const id of idsIndice) if ($(id).getBoundingClientRect().top <= 140) actual = id;
+  if (scrollY > 0 && innerHeight + scrollY >= document.documentElement.scrollHeight - 4) actual = idsIndice[idsIndice.length - 1];
+  }
+  $("l-indice").querySelectorAll("a").forEach((a) => a.setAttribute("aria-current", String(a.dataset.destino === actual)));
+}
+
+let marcaPendiente = false;
+for (const tipo of ["wheel", "touchstart", "keydown"]) addEventListener(tipo, () => { destinoElegido = null; }, { passive: true });
+addEventListener("scroll", () => {
+  if (marcaPendiente) return;
+  marcaPendiente = true;
+  requestAnimationFrame(() => { marcaPendiente = false; marcarIndice(); });
+}, { passive: true });
+
 function pintarCasos() {
   const lista = $("lista-casos");
   lista.replaceChildren();
@@ -1139,6 +1224,9 @@ function conectar() {
     if (ev.key === "Escape" && $("opciones").open) { $("opciones").open = false; $("opciones").querySelector("summary").focus(); }
   });
 
+  $("l-repetir").addEventListener("click", () => {
+    if (estado.actual) analizar(estado.actual.peticion, estado.actual);
+  });
   $("inicio").addEventListener("click", () => {
     if (estado.ocupado) return;
     estado.actual = null;

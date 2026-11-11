@@ -135,7 +135,8 @@
     </section>
 
     <section id="vista-resultado" class="vista resultado" hidden>
-      <div class="cabecera-resultado">
+      <div class="resultado-cuerpo">
+      <div class="cabecera-resultado" id="r-cabecera">
         <p class="objetivo-ruta" id="r-objetivo"></p>
         <h1 class="titular veredicto revelable" id="r-veredicto"></h1>
         <p class="meta" id="r-meta"></p>
@@ -215,6 +216,30 @@
         <button type="button" class="boton secundario" data-formato="json">JSON</button>
       </div>
       <p class="aviso" data-i18n="aviso">Los marcadores son indicios, no pruebas. Revisa cada evidencia antes de sacar conclusiones.</p>
+      </div>
+      <aside class="lateral" id="r-lateral" data-i18n-aria="resumen-analisis">
+        <div class="lateral-tarjeta">
+          <p class="lateral-titulo" data-i18n="resumen">Resumen</p>
+          <dl class="lateral-cifras">
+            <div id="l-ia"><dt data-i18n="l-ia">Marcadores de IA</dt><dd><span id="l-ia-valor">0</span><small>/100</small></dd></div>
+            <div id="l-cvss"><dt data-i18n="seg-cvss-max">CVSS v4.0 máximo</dt><dd id="l-cvss-valor">0</dd></div>
+          </dl>
+          <div class="lateral-riesgos" id="l-riesgos"></div>
+        </div>
+        <nav class="lateral-indice" data-i18n-aria="en-esta-pagina">
+          <p class="lateral-titulo" data-i18n="en-esta-pagina">En esta página</p>
+          <ol id="l-indice"></ol>
+        </nav>
+        <div class="lateral-acciones">
+          <button type="button" class="boton secundario" id="l-repetir" data-i18n="repetir">Repetir análisis</button>
+          <p class="lateral-titulo" data-i18n="exportar">Guardar el informe</p>
+          <div class="lateral-exportar">
+            <button type="button" class="boton secundario" data-formato="html">HTML</button>
+            <button type="button" class="boton secundario" data-formato="md">Markdown</button>
+            <button type="button" class="boton secundario" data-formato="json">JSON</button>
+          </div>
+        </div>
+      </aside>
     </section>
   </main>
 </div>

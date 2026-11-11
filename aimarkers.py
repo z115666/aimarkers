@@ -46,7 +46,7 @@ from datetime import datetime, timezone
 from html.parser import HTMLParser
 from pathlib import Path
 
-VERSION = "1.4.0"
+VERSION = "1.4.1"
 
 # ---------------------------------------------------------------------------
 # Idioma / Language
