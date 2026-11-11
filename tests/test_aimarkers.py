@@ -132,6 +132,17 @@ class PruebasImagenes(unittest.TestCase):
         for nombre, regla in casos.items():
             self.assertIn(regla, reglas(aimarkers.analizar_objetivo(str(IMG / nombre))), nombre)
 
+    def test_imagen_sin_metadatos_indeterminada(self):
+        datos = (IMG / "c2pa_ia.jpg").read_bytes()
+        # JPEG mínimo: SOI + resto desde la primera tabla de cuantización, sin APP1/APP11
+        limpio = datos[:2] + datos[datos.index(b"\xff\xdb"):]
+        res = aimarkers.Resultado("x", "imagen")
+        aimarkers.analizar_imagen(res, limpio, "x.jpg", None, set())
+        self.assertEqual(res.clave_banda(), "banda.indeterminada")
+        self.assertTrue(any("metadatos" in n for n in res.notas))
+        con_exif = aimarkers.analizar_objetivo(str(IMG / "foto_normal.jpg"))
+        self.assertEqual(con_exif.clave_banda(), "banda.nula")
+
     def test_foto_normal_sin_hallazgos(self):
         self.assertEqual(aimarkers.analizar_objetivo(str(IMG / "foto_normal.jpg")).hallazgos, [])
 

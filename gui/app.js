@@ -267,7 +267,7 @@ function pintarResultado(caso) {
     el("span", null, t(r.ficheros_analizados === 1 ? "ficheros-1" : "ficheros-n", { n: r.ficheros_analizados })));
 
   $("r-espectro").dataset.banda = r.banda;
-  $("r-puntos").textContent = String(r.puntuacion);
+  $("r-puntos").textContent = r.banda === "indeterminada" ? "?" : String(r.puntuacion);
   $("r-espectro-texto").textContent = t("espectro", { n: r.puntuacion, v: r.valoracion });
   const marca = $("r-marca");
   marca.style.left = "0%";
@@ -329,7 +329,8 @@ function pintarCasos() {
     boton.title = r.objetivo;
     if (caso === estado.actual) boton.setAttribute("aria-current", "true");
     const puntos = el("span", "caso-puntos", String(r.puntuacion));
-    puntos.style.color = `var(--banda-${r.banda})`;
+    puntos.style.color = r.banda === "indeterminada" ? "var(--tinta-3)" : `var(--banda-${r.banda})`;
+    if (r.banda === "indeterminada") puntos.textContent = "?";
     boton.append(el("span", "caso-nombre", r.objetivo.split(/[\\/]/).filter(Boolean).pop() || r.objetivo), puntos);
     boton.addEventListener("click", () => pintarResultado(caso));
     const item = el("li");
@@ -345,11 +346,15 @@ async function analizar(peticion, casoExistente = null) {
   ocupado(true);
   try {
     const datos = await api("/api/analyze", { ...peticion, idioma: estado.idioma, imagenes: $("imagenes-web").checked });
-    const caso = casoExistente || { peticion };
+    // Repetir el mismo objetivo actualiza su caso en lugar de duplicarlo
+    const clave = peticion.objetivo ? "o:" + peticion.objetivo.replace(/\/+$/, "").toLowerCase() : "l:" + peticion.lote;
+    const repetido = casoExistente || estado.casos.find((c) => c.clave === clave);
+    const caso = repetido || { peticion, clave };
     caso.id = datos.id;
     caso.resultados = datos.resultados;
     caso.idioma = estado.idioma;
-    if (!casoExistente) estado.casos.push(caso);
+    if (repetido) estado.casos.splice(estado.casos.indexOf(repetido), 1);
+    estado.casos.push(caso);
     ocupado(false);
     pintarResultado(caso);
   } catch (e) {

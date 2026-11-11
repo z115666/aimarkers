@@ -45,7 +45,7 @@ from datetime import datetime, timezone
 from html.parser import HTMLParser
 from pathlib import Path
 
-VERSION = "1.2.0"
+VERSION = "1.2.1"
 
 # ---------------------------------------------------------------------------
 # Idioma / Language
@@ -89,6 +89,8 @@ TEXTOS: dict[str, tuple[str, str]] = {
     "banda.baja": ("Indicios débiles: rasgos compatibles, nada concluyente",
                    "Weak signs: compatible traits, nothing conclusive"),
     "banda.nula": ("Sin indicios relevantes", "No relevant signs"),
+    "banda.indeterminada": ("No se puede determinar: la imagen no conserva metadatos",
+                            "Cannot be determined: the image has no metadata left"),
     # Tipos de objetivo
     "tipo.dir": ("directorio", "directory"),
     "tipo.repo": ("repositorio git", "git repository"),
@@ -157,6 +159,10 @@ TEXTOS: dict[str, tuple[str, str]] = {
     "nota.c2pa_sin_ia": ("{u}: credenciales C2PA sin declaración de IA ({d}).", "{u}: C2PA credentials without an AI declaration ({d})."),
     "nota.c2patool_no": ("c2patool no está instalado: las firmas C2PA no se han verificado (brew install c2patool).",
                          "c2patool is not installed: C2PA signatures were not verified (brew install c2patool)."),
+    "nota.sin_metadatos": ("{u}: la imagen ({f}) no conserva metadatos (ni C2PA, ni XMP, ni EXIF). Pasa con capturas, "
+                           "miniaturas de buscadores y redes sociales. Busca el original con una búsqueda inversa de imágenes.",
+                           "{u}: the image ({f}) has no metadata left (no C2PA, XMP or EXIF). This happens with screenshots, "
+                           "search engine thumbnails and social networks. Look for the original with a reverse image search."),
     "nota.imagen_grande": ("{u}: imagen demasiado grande; no se ha analizado.", "{u}: image too large; not analysed."),
     # Evidencias generadas
     "ev.muletillas": ("{n} apariciones ({d}/1000 palabras): {l}", "{n} occurrences ({d}/1000 words): {l}"),
@@ -380,6 +386,7 @@ class Resultado:
     hallazgos: list[Hallazgo] = field(default_factory=list)
     notas: list[str] = field(default_factory=list)
     ficheros_analizados: int = 0
+    imagenes_sin_metadatos: int = 0
 
     def anadir(self, regla: str, nivel: str, ubicacion: str, extracto: str = "") -> None:
         extracto = re.sub(r"\s+", " ", extracto).strip()
@@ -418,6 +425,9 @@ class Resultado:
 
     def clave_banda(self) -> str:
         p = self.puntuacion()
+        if (self.tipo == "imagen" and not self.hallazgos and self.imagenes_sin_metadatos
+                and self.imagenes_sin_metadatos == self.ficheros_analizados):
+            return "banda.indeterminada"  # sin metadatos no hay nada que leer: ni a favor ni en contra
         if p < 15 and any(h.nivel in ("medio", "fuerte") for h in self.hallazgos):
             return "banda.baja"  # hay algún indicio concreto aunque puntúe poco
         for umbral, clave in UMBRALES_BANDA:
@@ -1253,6 +1263,11 @@ def texto_origen(codigo: str) -> str:
 def analizar_imagen(res: Resultado, d: bytes, ubic: str, ruta_validacion: Path | None, avisos: set[str]) -> None:
     meta = extraer_metadatos(d)
     res.ficheros_analizados += 1
+    if not (meta["jumbf"] or meta["exif"] or meta["xmp"] or meta["textos"]):
+        res.imagenes_sin_metadatos += 1
+        res.notas.append(t("nota.sin_metadatos", u=ubic, f=meta["formato"]))
+        if meta["formato"] in ("JPEG", "PNG", "WebP"):
+            return
 
     # 1. C2PA
     almacen = None

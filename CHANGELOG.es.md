@@ -4,6 +4,12 @@
 
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [1.2.1] - 2026-11-11
+
+### Cambiado
+- Las imágenes sin ningún metadato (ni C2PA, ni XMP, ni EXIF: capturas, miniaturas de buscadores, redes sociales) se valoran ahora como «No se puede determinar» en lugar de «Sin indicios relevantes», con una nota que sugiere una búsqueda inversa de imágenes.
+- Interfaz: analizar otra vez el mismo objetivo actualiza su caso en lugar de duplicarlo.
+
 ## [1.2.0] - 2026-11-10
 
 ### Añadido

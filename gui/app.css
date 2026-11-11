@@ -253,6 +253,10 @@ button, input { font: inherit; color: inherit; }
 .veredicto { font-size: clamp(32px, 4.4vw, 54px); max-width: 18ch; }
 .veredicto[data-banda="alta"] { color: var(--banda-alta); text-shadow: var(--brillo-texto) color-mix(in srgb, var(--banda-alta) 30%, transparent); }
 .veredicto[data-banda="media"] { color: var(--banda-media); }
+.veredicto[data-banda="indeterminada"] { color: var(--tinta-2); }
+.espectro[data-banda="indeterminada"] .espectro-marca,
+.espectro[data-banda="indeterminada"] .espectro-cifra small { display: none; }
+.espectro[data-banda="indeterminada"] .espectro-cifra { color: var(--tinta-3); }
 .meta { margin: 16px 0 0; color: var(--tinta-2); display: flex; flex-wrap: wrap; gap: 4px 18px; }
 
 .espectro { margin: 40px 0 0; display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 26px; align-items: center; }

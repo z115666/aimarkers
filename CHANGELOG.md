@@ -4,6 +4,12 @@
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [semantic versioning](https://semver.org/).
 
+## [1.2.1] - 2026-11-11
+
+### Changed
+- Images with no metadata at all (no C2PA, XMP or EXIF: screenshots, search engine thumbnails, social networks) are now reported as "Cannot be determined" instead of "No relevant signs", with a note suggesting a reverse image search.
+- Interface: analysing the same target again updates its case instead of duplicating it.
+
 ## [1.2.0] - 2026-11-10
 
 ### Added
