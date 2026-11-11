@@ -191,6 +191,7 @@ button, input { font: inherit; color: inherit; }
 .casos-vacio { margin: 0 6px; color: var(--tinta-3); font-size: 13px; }
 .estado-c2pa { margin-top: auto; padding: 12px 6px 0; font-size: 12px; color: var(--tinta-3); border-top: 1px solid var(--linea); }
 .estado-c2pa strong { color: var(--tinta-2); font-weight: 600; }
+#estado-pixeles { margin-top: 0; border-top: 0; padding-top: 6px; }
 
 .banco { padding: 56px clamp(20px, 5vw, 72px) 80px; outline: none; }
 .vista { max-width: 860px; }
@@ -591,6 +592,11 @@ button, input { font: inherit; color: inherit; }
 
 .seg-anexos { margin-top: 56px; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 32px; }
 .seg-anexo h3 { margin: 0 0 12px; font: 700 22px/1.2 var(--fuente-display); }
+.tabla-pixeles th { text-align: left; font-size: 12px; font-weight: 600; color: var(--tinta-3); padding: 0 6px 8px; }
+.tabla-pixeles tr.alerta td { background: color-mix(in srgb, var(--medio) 12%, transparent); }
+.tabla-pixeles td small { display: block; color: var(--tinta-3); margin-top: 2px; }
+.pixeles .ayuda { margin: 0 0 12px; }
+section.pixeles { margin-top: 36px; }
 .tabla-anexo { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 .tabla-anexo td { padding: 8px 6px; border-top: 1px solid var(--linea); vertical-align: top; }
 .tabla-anexo tr:last-child td { border-bottom: 1px solid var(--linea); }

@@ -6,6 +6,7 @@
 
 | Versión | Soporte |
 | --- | --- |
+| 1.6.x | Sí |
 | 1.5.x | Sí |
 | 1.4.x | Sí |
 | 1.3.x | Sí |
@@ -36,9 +37,11 @@ aimarkers está pensado para analizar contenido **no confiable**: repositorios, 
 | Interfaz gráfica (`--gui`) atacada desde otra web o pestaña | Solo escucha en 127.0.0.1; token de 256 bits en el fragmento de la URL, exigido en una cabecera; comprobación de `Host` y `Origin` frente a DNS rebinding y CSRF; CSP estricta sin scripts en línea; ficheros estáticos de una lista cerrada; subidas limitadas y saneadas en una carpeta temporal que se borra al salir |
 | Rastreo de una web completa | Solo el mismo sitio y solo http(s); respeta `robots.txt` y `nofollow`; pausa entre peticiones; límites por fichero y 2 GB en total; todo en una carpeta temporal que se borra al terminar, también tras un error |
 | Uso indebido del modo de seguridad activo contra terceros | Desactivado por defecto; exige `--activo` y una declaración expresa con `--autorizado` (una casilla de confirmación en la interfaz). Solo pide rutas conocidas: sin cargas de inyección, credenciales ni exploits |
-| Filtrado de secretos encontrados durante el análisis | Las claves y tokens se muestran recortados en los informes |
+| Filtrado de secretos encontrados durante el análisis | Las claves y tokens se muestran recortados en los informes; las contraseñas de las URL de bases de datos se sustituyen por `•••` |
+| Decodificación de imágenes para la lectura de píxeles | Opcional y solo si están instalados Pillow y NumPy. El límite de Pillow se fija en 50 megapíxeles (se rechazan las bombas de descompresión), solo se convierte a números un recorte de 1024×1024 y cualquier error de decodificación solo omite la lectura. Mantén Pillow actualizado: es la parte que interpreta los datos de imagen no confiables |
+| Consultas a OSV.dev | Dirección fija en HTTPS (`api.osv.dev`), tiempo máximo de 20 s, respuestas limitadas a 8 MB y validadas como JSON; los identificadores de aviso se comprueban con un patrón estricto antes de usarlos en una URL; como máximo 3.000 paquetes y 200 avisos por análisis; un fallo solo añade una nota |
 | Inyección en los informes | El informe HTML escapa todo el contenido analizado y no contiene scripts; el Markdown escapa HTML y barras verticales |
-| Cadena de suministro | Sin dependencias en tiempo de ejecución (solo biblioteca estándar). Acciones de GitHub fijadas por hash de commit y herramientas de desarrollo instaladas con `--require-hashes`. La fórmula de Homebrew apunta a un commit concreto con su SHA-256 |
+| Cadena de suministro | Sin dependencias obligatorias en tiempo de ejecución (solo biblioteca estándar; Pillow y NumPy son opcionales). Acciones de GitHub fijadas por hash de commit y herramientas de desarrollo instaladas con `--require-hashes`. La fórmula de Homebrew apunta a un commit concreto con su SHA-256 |
 
 ## Riesgos aceptados
 
@@ -55,4 +58,4 @@ aimarkers está pensado para analizar contenido **no confiable**: repositorios, 
 
 ## Privacidad
 
-aimarkers no envía datos a ningún sitio salvo la URL que le pidas analizar, sus imágenes y su `/llms.txt`, y, en el análisis de seguridad, el nombre del dominio a un resolutor de DNS sobre HTTPS (Cloudflare, o Google como respaldo) para comprobar SPF, DMARC, DNSSEC y CAA; `--sin-dns` lo desactiva. Usa `--sin-imagenes` si no quieres descargar las imágenes. Los informes pueden contener extractos del contenido analizado, incluidos los *prompts* guardados en imágenes: trátalos con la misma confidencialidad que el original. Por eso `.gitignore` excluye los informes generados.
+aimarkers no envía datos a ningún sitio salvo la URL que le pidas analizar, sus imágenes y su `/llms.txt`, y, en el análisis de seguridad, el nombre del dominio a un resolutor de DNS sobre HTTPS (Cloudflare, o Google como respaldo) para comprobar SPF, DMARC, DNSSEC y CAA (`--sin-dns` lo desactiva), y el ecosistema, el nombre y la versión de las dependencias y librerías JavaScript que encuentra a OSV.dev, para comprobar si tienen vulnerabilidades conocidas (`--sin-osv` lo desactiva). Nunca envía código, contenido de ficheros ni rutas. Usa `--sin-imagenes` si no quieres descargar las imágenes. Los informes pueden contener extractos del contenido analizado, incluidos los *prompts* guardados en imágenes: trátalos con la misma confidencialidad que el original. Por eso `.gitignore` excluye los informes generados.

@@ -47,7 +47,7 @@ from datetime import datetime, timezone
 from html.parser import HTMLParser
 from pathlib import Path
 
-VERSION = "1.5.0"
+VERSION = "1.6.0"
 
 # ---------------------------------------------------------------------------
 # Idioma / Language
@@ -161,6 +161,37 @@ TEXTOS: dict[str, tuple[str, str]] = {
     "nota.c2pa_sin_ia": ("{u}: credenciales C2PA sin declaración de IA ({d}).", "{u}: C2PA credentials without an AI declaration ({d})."),
     "nota.c2patool_no": ("c2patool no está instalado: las firmas C2PA no se han verificado (brew install c2patool).",
                          "c2patool is not installed: C2PA signatures were not verified (brew install c2patool)."),
+    "nota.pixeles_no": ("Lectura de píxeles no disponible: instala Pillow y NumPy (pip install pillow numpy) para medir el ruido de "
+                        "sensor y la huella periódica de las imágenes.",
+                        "Pixel reading unavailable: install Pillow and NumPy (pip install pillow numpy) to measure the images' "
+                        "sensor noise and periodic trace."),
+    "nota.pixeles_camara": ("{u}: la lectura de píxeles muestra rasgos atípicos, pero la imagen declara una cámara ({c}) y no se "
+                            "puntúa. Los datos de cámara se pueden falsificar: si dudas, busca el original.",
+                            "{u}: the pixel reading shows unusual traits, but the image declares a camera ({c}) so it is not "
+                            "scored. Camera data can be forged: if in doubt, look for the original."),
+    "px.ubicacion": ("píxeles", "pixels"),
+    "px.titulo": ("Lectura de píxeles", "Pixel reading"),
+    "px.explicacion": ("Medidas sobre la propia imagen, no sobre sus metadatos. Umbrales conservadores: una foto real casi nunca "
+                       "da positivo, pero muchas imágenes generadas tampoco. Un «normal» no demuestra que la imagen sea real.",
+                       "Measurements on the image itself, not its metadata. Conservative thresholds: a real photo almost never "
+                       "triggers them, but many generated images do not either. A «normal» reading does not prove the image is real."),
+    "px.col_imagen": ("Imagen", "Image"),
+    "px.col_ruido": ("Ruido de sensor", "Sensor noise"),
+    "px.col_periodico": ("Huella periódica", "Periodic trace"),
+    "px.col_tamano": ("Tamaño", "Size"),
+    "px.normal": ("normal", "normal"),
+    "px.bajo": ("casi nulo", "almost none"),
+    "px.alta": ("marcada", "marked"),
+    "px.habitual": ("habitual en generadores", "common for generators"),
+    "px.sin_lectura": ("sin lectura", "not measured"),
+    "px.no_aplicable_grafico": ("no aplica: captura o gráfico", "n/a: screenshot or graphic"),
+    "px.no_aplicable_pequena": ("no aplica: imagen pequeña", "n/a: small image"),
+    "px.camara": ("cámara: {c}", "camera: {c}"),
+    "px.ruido": ("sin ruido de sensor (residuo mediano {m}, zonas lisas {b}): propio de imágenes generadas, renderizadas o muy retocadas",
+                 "no sensor noise (median residual {m}, flat areas {b}): typical of generated, rendered or heavily retouched images"),
+    "px.periodico": ("huella periódica en la rejilla de 8 px (pico {v}): propia de decodificadores de difusión y GAN",
+                     "periodic trace on the 8 px grid (peak {v}): typical of diffusion and GAN decoders"),
+    "px.resolucion": ("{w}×{h}, tamaño de salida habitual de generadores", "{w}×{h}, a common generator output size"),
     "nota.sin_metadatos": ("{u}: la imagen ({f}) no conserva metadatos (ni C2PA, ni XMP, ni EXIF). Pasa con capturas, "
                            "miniaturas de buscadores y redes sociales. Busca el original con una búsqueda inversa de imágenes.",
                            "{u}: the image ({f}) has no metadata left (no C2PA, XMP or EXIF). This happens with screenshots, "
@@ -183,6 +214,7 @@ TEXTOS: dict[str, tuple[str, str]] = {
     "fase.dns": ("Consultando DNS del dominio", "Querying the domain's DNS"),
     "fase.activo": ("Comprobando rutas sensibles", "Checking sensitive paths"),
     "fase.codigo": ("Revisando la seguridad del código", "Reviewing code security"),
+    "fase.dependencias": ("Consultando vulnerabilidades de dependencias", "Checking dependency vulnerabilities"),
     "prog.paginas": ("Rastreando: {n} páginas", "Crawling: {n} pages"),
     "prog.scripts": ("Descargando JavaScript del sitio: {n}", "Downloading site JavaScript: {n}"),
     "prog.imagenes": ("Analizando imágenes: {n} de {t}", "Analysing images: {n} of {t}"),
@@ -250,6 +282,10 @@ TEXTOS: dict[str, tuple[str, str]] = {
                       "Add the security analysis (OWASP Top 10, MITRE ATT&CK, CVSS v4.0, CIA risk matrix)"),
     "cli.detenido": ("Análisis detenido. No se ha generado ningún informe y los ficheros temporales se han borrado.",
                      "Analysis stopped. No report was written and temporary files were deleted."),
+    "cli.sin_pixeles": ("No hacer la lectura de píxeles de las imágenes (ruido de sensor y huella periódica)",
+                        "Skip the pixel reading of images (sensor noise and periodic trace)"),
+    "cli.sin_osv": ("No contrastar dependencias ni librerías con OSV.dev (solo se envían nombre y versión de cada paquete)",
+                    "Do not check dependencies or libraries against OSV.dev (only each package's name and version are sent)"),
     "cli.sin_dns": ("No consultar SPF, DMARC, DNSSEC ni CAA (se consultan por DNS sobre HTTPS)",
                     "Do not query SPF, DMARC, DNSSEC or CAA (queried over DNS over HTTPS)"),
     "cli.activo": ("Seguridad en modo activo: comprueba rutas sensibles conocidas (exige --autorizado)",
@@ -318,6 +354,9 @@ DESCRIPCIONES: dict[str, tuple[str, str]] = {
     "carpeta-agente": ("Carpeta de configuración de agentes de IA", "Configuration folder for AI agents"),
     # Imágenes
     "c2pa-ia": ("Credenciales de contenido C2PA declaran generación con IA", "C2PA Content Credentials declare AI generation"),
+    "pixeles-varias-senales": ("Varias lecturas de píxeles compatibles con imagen sintética",
+                               "Several pixel readings consistent with a synthetic image"),
+    "pixeles-una-senal": ("Una lectura de píxeles compatible con imagen sintética", "One pixel reading consistent with a synthetic image"),
     "c2pa-edicion-ia": ("Credenciales C2PA declaran edición o composición con IA",
                         "C2PA Content Credentials declare AI editing or compositing"),
     "c2pa-herramienta-ia": ("Credenciales C2PA emitidas por una herramienta de IA", "C2PA Content Credentials issued by an AI tool"),
@@ -355,8 +394,10 @@ def t_lineas(n: int, ejemplo: str) -> str:
 # Avance del análisis (para la barra de progreso de la interfaz y la consola)
 # ---------------------------------------------------------------------------
 
-FASES = ("subida", "descarga", "ia", "imagenes", "ficheros", "git", "scripts", "seguridad", "dns", "activo", "codigo")
+FASES = ("subida", "descarga", "ia", "imagenes", "ficheros", "git", "scripts", "seguridad", "dependencias", "dns", "activo", "codigo")
 _AVANCE: dict = {"f": None}
+_PIXELES: dict = {"activo": True}  # lectura de píxeles de las imágenes (necesita Pillow y NumPy)
+REGLAS_PIXELES = {"pixeles-una-senal", "pixeles-varias-senales"}
 _PARAR = threading.Event()
 
 
@@ -478,6 +519,7 @@ class Resultado:
     ficheros_analizados: int = 0
     imagenes_sin_metadatos: int = 0
     seguridad: object = None  # InformeSeguridad del módulo aimarkers_seguridad
+    lecturas: list = field(default_factory=list)  # lecturas de píxeles por imagen
     solo_seguridad: bool = False
 
     def anadir(self, regla: str, nivel: str, ubicacion: str, extracto: str = "") -> None:
@@ -517,7 +559,8 @@ class Resultado:
 
     def clave_banda(self) -> str:
         p = self.puntuacion()
-        if (self.tipo == "imagen" and not self.hallazgos and self.imagenes_sin_metadatos
+        concluyentes = [h for h in self.hallazgos if not (h.regla in REGLAS_PIXELES and h.nivel == "debil")]
+        if (self.tipo == "imagen" and not concluyentes and self.imagenes_sin_metadatos
                 and self.imagenes_sin_metadatos == self.ficheros_analizados):
             return "banda.indeterminada"  # sin metadatos no hay nada que leer: ni a favor ni en contra
         if p < 15 and any(h.nivel in ("medio", "fuerte") for h in self.hallazgos):
@@ -543,6 +586,7 @@ class Resultado:
             "ficheros_analizados": self.ficheros_analizados,
             "idioma": idioma(),
             "notas": self.notas,
+            "lecturas_imagen": self.lecturas,
             "seguridad": self.seguridad.a_dict() if self.seguridad is not None else None,
             "hallazgos": [{"regla": h.regla, "nivel": h.nivel, "descripcion": h.descripcion,
                            "ubicacion": h.ubicacion, "extracto": h.extracto, "peso": h.peso} for h in self.hallazgos],
@@ -1353,9 +1397,44 @@ def texto_origen(codigo: str) -> str:
     return codigo if traducido == f"origen.{codigo}" else traducido
 
 
+def analizar_pixeles(res: Resultado, d: bytes, ubic: str, meta: dict, avisos: set[str]) -> None:
+    """Lecturas de píxeles (ruido de sensor, huella periódica, resolución) y rastro de cámara."""
+    import aimarkers_pixeles as px
+    con_pixeles = _PIXELES["activo"] and px.disponible()
+    if _PIXELES["activo"] and not con_pixeles and "pixeles" not in avisos:
+        avisos.add("pixeles")
+        res.notas.append(t("nota.pixeles_no"))
+    lectura = px.lectura(d, meta["exif"], con_pixeles)
+    if len(res.lecturas) < 200:
+        res.lecturas.append({"ubicacion": ubic, **lectura})
+    senales = lectura["senales"]
+    if not ("ruido" in senales or "periodico" in senales):
+        return  # la resolución sola no basta: muchas fotos reales miden 512×512 o 1024×1024
+    if lectura["camara"]:  # una cámara declarada: las lecturas no se puntúan (el EXIF se puede falsificar)
+        res.notas.append(t("nota.pixeles_camara", u=ubic, c=lectura["camara"]))
+        return
+    p = lectura["pixeles"] or {}
+    partes = []
+    if "ruido" in senales:
+        partes.append(t("px.ruido", m=p["ruido_mediana"], b=p["ruido_p10"]))
+    if "periodico" in senales:
+        partes.append(t("px.periodico", v=p["periodico"]))
+    if "resolucion" in senales:
+        partes.append(t("px.resolucion", w=lectura["ancho"], h=lectura["alto"]))
+    if len(senales) >= 2:
+        res.anadir("pixeles-varias-senales", "medio", f"{ubic}:{t('px.ubicacion')}", "; ".join(partes))
+    else:
+        res.anadir("pixeles-una-senal", "debil", f"{ubic}:{t('px.ubicacion')}", partes[0])
+
+
+def fijar_pixeles(activo: bool) -> None:
+    _PIXELES["activo"] = bool(activo)
+
+
 def analizar_imagen(res: Resultado, d: bytes, ubic: str, ruta_validacion: Path | None, avisos: set[str]) -> None:
     meta = extraer_metadatos(d)
     res.ficheros_analizados += 1
+    analizar_pixeles(res, d, ubic, meta, avisos)
     if not (meta["jumbf"] or meta["exif"] or meta["xmp"] or meta["textos"]):
         res.imagenes_sin_metadatos += 1
         res.notas.append(t("nota.sin_metadatos", u=ubic, f=meta["formato"]))
@@ -1812,6 +1891,7 @@ def analizar_objetivo(objetivo: str, imagenes_web: bool = True, opciones=None) -
     if opciones is None:
         opciones = web.Opciones(imagenes=imagenes_web)
     fijar_avance(opciones.progreso)
+    fijar_pixeles(getattr(opciones, "pixeles", True))
     avisos: set[str] = set()
     if re.match(r"https?://", objetivo, I):
         return analizar_web_objetivo(objetivo, opciones)
@@ -1824,7 +1904,7 @@ def analizar_objetivo(objetivo: str, imagenes_web: bool = True, opciones=None) -
         rutas = analizar_directorio(res, ruta, avisos)
         if opciones.seguridad:
             import aimarkers_seguridad
-            res.seguridad = aimarkers_seguridad.analizar_ficheros(rutas, ruta)
+            res.seguridad = aimarkers_seguridad.analizar_ficheros(rutas, ruta, opciones)
             if solo:
                 res.ficheros_analizados = len(rutas)
         return res
@@ -1843,7 +1923,7 @@ def analizar_objetivo(objetivo: str, imagenes_web: bool = True, opciones=None) -
                     analizar_imagenes_locales(res, crudo, ruta, avisos)
         if opciones.seguridad:
             import aimarkers_seguridad
-            res.seguridad = aimarkers_seguridad.analizar_ficheros([ruta], ruta.parent)
+            res.seguridad = aimarkers_seguridad.analizar_ficheros([ruta], ruta.parent, opciones)
             if solo:
                 res.ficheros_analizados = 1
         if res.ficheros_analizados == 0 and not res.notas and not solo:
@@ -1918,6 +1998,53 @@ def informe_consola(resultados: list[Resultado], max_ev: int, color: bool) -> st
     return "\n".join(salida)
 
 
+def tabla_pixeles(res: Resultado) -> list[dict]:
+    """Lecturas de píxeles listas para mostrar (informes e interfaz)."""
+    filas = []
+    for lec in res.lecturas[:40]:
+        p = lec.get("pixeles")
+        senales = set(lec["senales"])
+        if p is None:
+            ruido, periodico = t("px.sin_lectura"), "—"
+        elif not p.get("aplicable"):
+            ruido, periodico = t("px.no_aplicable_" + ("pequena" if p.get("motivo") == "pequena" else "grafico")), "—"
+        else:
+            ruido = f"{p['ruido_mediana']:.2f} · " + t("px.bajo" if "ruido" in senales else "px.normal")
+            periodico = f"{p['periodico']:.2f} · " + t("px.alta" if "periodico" in senales else "px.normal")
+        tamano = f"{lec['ancho']}×{lec['alto']}" if lec["ancho"] else "—"
+        if lec["resolucion_generador"]:
+            tamano += " · " + t("px.habitual")
+        filas.append({"ubicacion": lec["ubicacion"], "ruido": ruido, "periodico": periodico, "tamano": tamano,
+                      "camara": lec["camara"], "alerta": bool(senales & {"ruido", "periodico"}) and not lec["camara"]})
+    return filas
+
+
+def _pixeles_md(res: Resultado) -> list[str]:
+    filas = tabla_pixeles(res)
+    if not filas:
+        return []
+    md = [f"**{t('px.titulo')}**", "", t("px.explicacion"), "",
+          f"| {t('px.col_imagen')} | {t('px.col_ruido')} | {t('px.col_periodico')} | {t('px.col_tamano')} |", "| --- | --- | --- | --- |"]
+    for f in filas:
+        camara = f" ({t('px.camara', c=f['camara'])})" if f["camara"] else ""
+        md.append(f"| `{f['ubicacion']}`{html.escape(camara)} | {f['ruido']} | {f['periodico']} | {f['tamano']} |")
+    return md + [""]
+
+
+def _pixeles_html(res: Resultado) -> str:
+    e = html.escape
+    filas = tabla_pixeles(res)
+    if not filas:
+        return ""
+    cuerpo = "".join(
+        f"<tr{' class=alerta' if f['alerta'] else ''}><td><code>{e(f['ubicacion'])}</code>"
+        + (f"<br><small>{e(t('px.camara', c=f['camara']))}</small>" if f["camara"] else "")
+        + f"</td><td>{e(f['ruido'])}</td><td>{e(f['periodico'])}</td><td>{e(f['tamano'])}</td></tr>" for f in filas)
+    return (f"<details class='pixeles'><summary>{e(t('px.titulo'))}</summary><p>{e(t('px.explicacion'))}</p>"
+            f"<table><thead><tr><th>{e(t('px.col_imagen'))}</th><th>{e(t('px.col_ruido'))}</th><th>{e(t('px.col_periodico'))}</th>"
+            f"<th>{e(t('px.col_tamano'))}</th></tr></thead><tbody>{cuerpo}</tbody></table></details>")
+
+
 def informe_markdown(resultados: list[Resultado], max_ev: int) -> str:
     md = [f"# {t('ui.titulo')}", "", t("ui.generado", v=VERSION, fecha=_fecha_actual()), "", f"> {t('ui.aviso')}", ""]
     for res in resultados:
@@ -1944,6 +2071,7 @@ def informe_markdown(resultados: list[Resultado], max_ev: int) -> str:
             md.append("")
         else:
             md += [t("ui.ninguno"), ""]
+        md += _pixeles_md(res)
         if res.notas:
             md += [f"**{t('ui.notas')}**", ""] + [f"- {html.escape(n)}" for n in res.notas] + [""]
         md += _seccion_seguridad_md(res)
@@ -1995,7 +2123,7 @@ def informe_html(resultados: list[Resultado], max_ev: int) -> str:
       <p class="meta">{e(t('tipo.' + res.tipo))} · {e(t_ficheros(res.ficheros_analizados))}</p>
       <p class="banda">{e(res.banda())}</p></div>
   </div>
-  {explicita}{tabla}{notas}{seguridad}
+  {explicita}{tabla}{_pixeles_html(res)}{notas}{seguridad}
 </section>""")
     veces = t("ui.col_veces").replace('"', "")
     css_seguridad = ""
@@ -2027,7 +2155,8 @@ section {{ background:var(--card); border:1px solid var(--borde); border-radius:
 table {{ width:100%; border-collapse:collapse; font-size:14px }} th,td {{ text-align:left; vertical-align:top;
   padding:8px; border-top:1px solid var(--borde) }} th {{ color:var(--sub); font-weight:600 }}
 td ul {{ margin:0; padding-left:16px }} code {{ font-size:12px; color:var(--sub); word-break:break-all }} .num {{ text-align:right }}
-td {{ overflow-wrap:anywhere }} section {{ overflow:hidden }} a {{ color:var(--deb) }} a:visited {{ color:var(--deb) }}
+td {{ overflow-wrap:anywhere }} section {{ overflow:hidden }}
+details.pixeles {{ margin:14px 0 }} details.pixeles p {{ color:var(--suave, inherit); font-size:13px }} tr.alerta td {{ background:rgba(240,170,60,.12) }} a {{ color:var(--deb) }} a:visited {{ color:var(--deb) }}
 .nivel {{ font-size:12px; font-weight:700; padding:2px 8px; border-radius:99px; color:#fff; white-space:nowrap }}
 .explicito {{ background:var(--exp) }} .fuerte {{ background:var(--fue) }} .medio {{ background:var(--med) }}
 .debil {{ background:var(--deb) }} .mas {{ color:var(--sub); list-style:none }}
@@ -2097,6 +2226,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--seguridad", "--security", dest="seguridad", action="store_true", help=t("cli.seguridad"))
     ap.add_argument("--solo-seguridad", "--security-only", dest="solo_seguridad", action="store_true", help=t("cli.solo_seguridad"))
     ap.add_argument("--sin-dns", "--no-dns", dest="sin_dns", action="store_true", help=t("cli.sin_dns"))
+    ap.add_argument("--sin-pixeles", "--no-pixels", dest="sin_pixeles", action="store_true", help=t("cli.sin_pixeles"))
+    ap.add_argument("--sin-osv", "--no-osv", dest="sin_osv", action="store_true", help=t("cli.sin_osv"))
     ap.add_argument("--activo", "--active", dest="activo", action="store_true", help=t("cli.activo"))
     ap.add_argument("--autorizado", "--authorized", dest="autorizado", action="store_true", help=t("cli.autorizado"))
     ap.add_argument("--umbral-cvss", "--cvss-threshold", dest="umbral_cvss", type=float, default=None, help=t("cli.umbral_cvss"))
@@ -2128,7 +2259,7 @@ def main(argv: list[str] | None = None) -> int:
     opciones = aimarkers_web.Opciones(
         rastrear=args.rastrear, max_paginas=args.max_paginas, max_imagenes=args.max_imagenes, retardo=max(0.0, args.retardo),
         imagenes=not args.sin_imagenes, seguridad=args.seguridad or args.solo_seguridad or args.activo, activo=args.activo,
-        autorizado=args.autorizado, solo_seguridad=args.solo_seguridad, dns=not args.sin_dns, progreso=progreso)
+        autorizado=args.autorizado, solo_seguridad=args.solo_seguridad, dns=not args.sin_dns, osv=not args.sin_osv, pixeles=not args.sin_pixeles, progreso=progreso)
     if opciones.seguridad:
         import aimarkers_seguridad  # noqa: F401 - registra sus textos para el informe
     try:

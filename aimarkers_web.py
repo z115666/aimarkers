@@ -166,6 +166,8 @@ class Opciones:
     ignorar_robots: bool = False
     solo_seguridad: bool = False
     dns: bool = True
+    osv: bool = True                 # contrastar dependencias con OSV.dev
+    pixeles: bool = True             # lectura de píxeles de las imágenes (Pillow y NumPy)
     max_total: int = MAX_TOTAL_POR_DEFECTO
     progreso: object = None          # función(texto) para informar del avance
 

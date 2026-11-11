@@ -37,6 +37,10 @@ const TEXTOS = {
     "fase-imagenes": "Metadatos de las imágenes", "fase-ficheros": "Marcadores de IA en los ficheros", "fase-git": "Historial de Git",
     "fase-scripts": "JavaScript del sitio", "fase-seguridad": "Cabeceras, cookies y contenido", "fase-dns": "Correo y DNS",
     "fase-activo": "Rutas sensibles (modo activo)", "fase-codigo": "Seguridad del código",
+    "fase-dependencias": "Dependencias vulnerables (OSV.dev)",
+    "px-titulo": "Lectura de píxeles", "px-imagen": "Imagen", "px-ruido": "Ruido de sensor", "px-periodico": "Huella periódica",
+    "px-tamano": "Tamaño", "i-pixeles": "Píxeles",
+    "px-ayuda": "Medidas sobre la propia imagen, no sobre sus metadatos. Umbrales conservadores: una foto real casi nunca da positivo, pero muchas imágenes generadas tampoco.",
     "volver-inicio": "Volver al inicio",
     "resumen": "Resumen", "resumen-analisis": "Resumen del análisis", "l-ia": "Marcadores de IA", "en-esta-pagina": "En esta página",
     "repetir": "Repetir análisis", "i-resumen": "Veredicto", "i-ia": "Marcadores de IA", "i-seguridad": "Seguridad",
@@ -69,12 +73,16 @@ const TEXTOS = {
     "guardado": "Informe {f} guardado en Descargas.",
     "c2pa-si": "<strong>Firmas C2PA:</strong> se verifican con c2patool.",
     "c2pa-no": "<strong>Firmas C2PA:</strong> sin verificar. Instala c2patool para comprobarlas.",
+    "px-si": "<strong>Lectura de píxeles:</strong> activa.",
+    "px-no": "<strong>Lectura de píxeles:</strong> instala Pillow y NumPy para activarla.",
     "atajo": "Atajo: {k}",
     "varios": "{n} ficheros sueltos",
     "opciones": "Opciones",
     "op-que": "Qué analizar",
     "op-ia": "Marcadores de IA",
     "op-seguridad": "Seguridad (OWASP, MITRE, CVSS)",
+    "op-consultas": "Consultar bases públicas (DNS y OSV.dev)",
+    "op-consultas-ayuda": "Solo se envían el dominio y el nombre y la versión de cada dependencia, nunca tu código.",
     "imagenes-web": "Imágenes de las webs",
     "op-webs": "Webs",
     "op-rastrear": "Rastrear todo el sitio",
@@ -141,6 +149,10 @@ const TEXTOS = {
     "fase-imagenes": "Image metadata", "fase-ficheros": "AI markers in files", "fase-git": "Git history",
     "fase-scripts": "Site JavaScript", "fase-seguridad": "Headers, cookies and content", "fase-dns": "Email and DNS",
     "fase-activo": "Sensitive paths (active mode)", "fase-codigo": "Code security",
+    "fase-dependencias": "Vulnerable dependencies (OSV.dev)",
+    "px-titulo": "Pixel reading", "px-imagen": "Image", "px-ruido": "Sensor noise", "px-periodico": "Periodic trace",
+    "px-tamano": "Size", "i-pixeles": "Pixels",
+    "px-ayuda": "Measurements on the image itself, not its metadata. Conservative thresholds: a real photo almost never triggers them, but many generated images do not either.",
     "volver-inicio": "Back to start",
     "resumen": "Summary", "resumen-analisis": "Analysis summary", "l-ia": "AI markers", "en-esta-pagina": "On this page",
     "repetir": "Run again", "i-resumen": "Verdict", "i-ia": "AI markers", "i-seguridad": "Security",
@@ -173,12 +185,16 @@ const TEXTOS = {
     "guardado": "{f} report saved to Downloads.",
     "c2pa-si": "<strong>C2PA signatures:</strong> verified with c2patool.",
     "c2pa-no": "<strong>C2PA signatures:</strong> not verified. Install c2patool to check them.",
+    "px-si": "<strong>Pixel reading:</strong> on.",
+    "px-no": "<strong>Pixel reading:</strong> install Pillow and NumPy to turn it on.",
     "atajo": "Shortcut: {k}",
     "varios": "{n} separate files",
     "opciones": "Options",
     "op-que": "What to analyse",
     "op-ia": "AI markers",
     "op-seguridad": "Security (OWASP, MITRE, CVSS)",
+    "op-consultas": "Query public databases (DNS and OSV.dev)",
+    "op-consultas-ayuda": "Only the domain and each dependency's name and version are sent, never your code.",
     "imagenes-web": "Website images",
     "op-webs": "Websites",
     "op-rastrear": "Crawl the whole site",
@@ -321,6 +337,7 @@ function aplicarTema() {
 function pintarEstadoC2pa() {
   if (!estado.config) return;
   textoConNegrita($("estado-c2pa"), t(estado.config.c2patool ? "c2pa-si" : "c2pa-no"));
+  textoConNegrita($("estado-pixeles"), t(estado.config.pixeles ? "px-si" : "px-no"));
 }
 
 
@@ -456,6 +473,7 @@ const FRASES = {
     activo: ["Probando rutas sensibles conocidas", "Buscando copias de seguridad expuestas", "Comprobando métodos HTTP permitidos"],
     codigo: ["Buscando secretos en el código", "Revisando patrones de inyección", "Comprobando dependencias y acciones sin fijar",
       "Buscando criptografía débil"],
+    dependencias: ["Leyendo los ficheros de bloqueo", "Consultando avisos en OSV.dev", "Buscando la versión que corrige cada fallo"],
   },
   en: {
     subida: ["Preparing files for analysis", "Copying them to a temporary folder deleted afterwards"],
@@ -473,6 +491,7 @@ const FRASES = {
     dns: ["Querying the domain's SPF", "Checking the DMARC policy", "Verifying DNSSEC and CAA"],
     activo: ["Trying well-known sensitive paths", "Looking for exposed backups", "Checking allowed HTTP methods"],
     codigo: ["Looking for secrets in code", "Reviewing injection patterns", "Checking unpinned dependencies and actions", "Looking for weak cryptography"],
+    dependencias: ["Reading lock files", "Querying advisories on OSV.dev", "Finding the version that fixes each issue"],
   },
 };
 
@@ -662,6 +681,7 @@ function pintarResultado(caso) {
   pintarUbicaciones(r);
   cambiarVistaIa(variasUbicaciones ? (estado.vistaIa || "nivel") : "nivel");
   pintarSeguridad(r.seguridad);
+  pintarPixeles(r);
   pintarLateral(r);
 
   const notas = $("r-notas");
@@ -896,6 +916,20 @@ function pintarAnexos(seg) {
   $("seg-terceros-bloque").hidden = !(seg.terceros || []).length;
 }
 
+function pintarPixeles(r) {
+  const filas = $("r-pixeles-filas");
+  filas.replaceChildren();
+  for (const f of r.pixeles || []) {
+    const fila = el("tr", f.alerta ? "alerta" : null);
+    const celda = el("td");
+    celda.append(el("code", null, f.ubicacion));
+    if (f.camara) celda.append(el("small", null, f.camara));
+    fila.append(celda, el("td", null, f.ruido), el("td", null, f.periodico), el("td", null, f.tamano));
+    filas.append(fila);
+  }
+  $("r-pixeles").hidden = !(r.pixeles || []).length || Boolean(r.solo_seguridad && r.seguridad);
+}
+
 function pintarUbicaciones(r) {
   const lista = $("r-ubicaciones");
   lista.replaceChildren();
@@ -949,6 +983,7 @@ function pintarLateral(r) {
   }
   const entradas = [["r-cabecera", "i-resumen", ""]];
   if (!soloSeg) entradas.push([r.grupos.length ? "r-grupos" : "r-vacio", "i-ia", r.hallazgos.length || ""]);
+  if (!soloSeg && (r.pixeles || []).length) entradas.push(["r-pixeles", "i-pixeles", r.pixeles.length]);
   if (seg) {
     entradas.push(["r-seguridad", "i-seguridad", ""]);
     if (seg.categorias.length > 1) entradas.push(["seg-categorias", "i-categorias", seg.categorias.length]);
@@ -1033,6 +1068,7 @@ function opcionesActuales() {
     max_paginas: Number.isFinite(maximo) ? maximo : 0,
     seguridad, solo_seguridad: seguridad && !ia,
     activo: $("op-activo").checked, autorizado: $("op-activo").checked && $("op-autorizado").checked,
+    consultas: $("op-consultas").checked,
   };
 }
 
@@ -1043,7 +1079,7 @@ function opcionesValidas() {
   return true;
 }
 
-const OPCIONES_GUARDADAS = ["op-ia", "op-seguridad", "imagenes-web", "op-rastrear"];
+const OPCIONES_GUARDADAS = ["op-ia", "op-seguridad", "imagenes-web", "op-rastrear", "op-consultas"];
 function cargarOpciones() {
   for (const id of OPCIONES_GUARDADAS) {
     const valor = leer("op." + id);
@@ -1057,7 +1093,8 @@ function cargarOpciones() {
 function actualizarOpciones() {
   $("op-autorizado-fila").hidden = !$("op-activo").checked;
   if (!$("op-activo").checked) $("op-autorizado").checked = false;
-  const activas = ["op-seguridad", "op-rastrear", "op-activo"].filter((id) => $(id).checked).length + ($("op-ia").checked ? 0 : 1);
+  const activas = ["op-seguridad", "op-rastrear", "op-activo"].filter((id) => $(id).checked).length + ($("op-ia").checked ? 0 : 1)
+    + ($("op-consultas").checked ? 0 : 1);
   $("opciones-cuenta").textContent = activas ? String(activas) : "";
 }
 

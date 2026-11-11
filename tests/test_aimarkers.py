@@ -180,6 +180,62 @@ class PruebasImagenes(unittest.TestCase):
         self.assertNotIn("parametros-generacion", reglas(res))
         self.assertNotIn("c2pa-ia", reglas(sin))
 
+    @unittest.skipUnless(__import__("aimarkers_pixeles").disponible(), "necesita Pillow y NumPy")
+    def test_lectura_de_pixeles(self):
+        import numpy as np
+        from PIL import Image
+        azar = np.random.default_rng(3)
+
+        def png(matriz, exif=None):
+            b = io.BytesIO()
+            imagen = Image.fromarray(np.stack([np.clip(matriz, 0, 255).astype(np.uint8)] * 3, -1))
+            if exif:
+                datos = Image.Exif()
+                datos.update(exif)
+                imagen.save(b, "JPEG", quality=98, exif=datos)
+            else:
+                imagen.save(b, "PNG")
+            return b.getvalue()
+        lado = 600
+        semilla = azar.normal(0, 1, (lado // 25, lado // 25))
+        liso = np.asarray(Image.fromarray(((semilla - semilla.min()) / np.ptp(semilla) * 150 + 50).astype(np.uint8))
+                          .resize((lado, lado), Image.BICUBIC), dtype=float)
+        ruidosa = liso + azar.normal(0, 4, liso.shape)
+        rejilla = 3.0 * np.add.outer(np.arange(lado) % 8 == 0, np.arange(lado) % 8 == 0)
+        casos = {"lisa": (png(liso), "pixeles-sinteticos"), "foto": (png(ruidosa), None),
+                 "periodica": (png(ruidosa + rejilla), "pixeles-sinteticos"),
+                 "camara": (png(liso, {0x010F: "Canon", 0x0110: "Canon EOS 40D"}), None),
+                 "captura": (png(np.full((lado, lado), 200.0)), None)}
+        for nombre, (datos, esperado) in casos.items():
+            res = aimarkers.Resultado(nombre, "imagen")
+            aimarkers.analizar_imagen(res, datos, nombre, None, set())
+            self.assertEqual(bool([h for h in res.hallazgos if h.regla in aimarkers.REGLAS_PIXELES]), bool(esperado), nombre)
+            self.assertEqual(len(res.lecturas), 1)
+        res = aimarkers.Resultado("camara", "imagen")
+        aimarkers.analizar_imagen(res, casos["camara"][0], "camara", None, set())
+        self.assertTrue(any("Canon EOS 40D" in n for n in res.notas))
+        # Sin metadatos y con una sola señal débil, la valoración sigue siendo indeterminada
+        res = aimarkers.Resultado("lisa", "imagen")
+        aimarkers.analizar_imagen(res, casos["lisa"][0], "lisa", None, set())
+        if res.hallazgos[0].nivel == "debil":
+            self.assertEqual(res.clave_banda(), "banda.indeterminada")
+        # Desactivada por opción
+        aimarkers.fijar_pixeles(False)
+        try:
+            res = aimarkers.Resultado("lisa", "imagen")
+            aimarkers.analizar_imagen(res, casos["lisa"][0], "lisa", None, set())
+            self.assertEqual(res.hallazgos, [])
+        finally:
+            aimarkers.fijar_pixeles(True)
+
+    def test_dimensiones_sin_dependencias(self):
+        import aimarkers_pixeles as px
+        for nombre in ("c2pa_ia.jpg", "sd_parametros.png", "foto_normal.jpg"):
+            self.assertIsNotNone(px.dimensiones((IMG / nombre).read_bytes()), nombre)
+        self.assertTrue(px.resolucion_generador((1024, 1792)))
+        self.assertTrue(px.resolucion_generador((1792, 1024)))
+        self.assertFalse(px.resolucion_generador((4032, 3024)))
+
     def test_falsos_positivos_imagen(self):
         self.assertIsNone(aimarkers.RE_GENERADOR_META.search("Imagen corporativa de la empresa"))
         self.assertIsNone(aimarkers.RE_GENERADOR_META.search("Canon EOS R6 / Adobe Lightroom"))
@@ -433,7 +489,103 @@ class PruebasSeguridadYRastreo(unittest.TestCase):
         aimarkers.fijar_idioma("es")
 
     def opciones(self, **extra):
+        extra.setdefault("osv", False)  # sin red externa en las pruebas: OSV.dev se simula aparte
         return self.web.Opciones(retardo=0, imagenes=False, **extra)
+
+    def test_osv_web_completa_librerias(self):
+        import aimarkers_dependencias as dep
+
+        def falsa(ruta, datos=None):
+            if ruta == "/querybatch":
+                return {"results": [{"vulns": [{"id": "GHSA-gxr4-xjj5-5px2"}]} if q["package"]["name"] == "jquery" else {}
+                                    for q in datos["queries"]]}
+            return {"id": "GHSA-gxr4-xjj5-5px2", "aliases": ["CVE-2020-11022"], "database_specific": {"severity": "MODERATE"},
+                    "affected": [{"package": {"ecosystem": "npm", "name": "jquery"},
+                                  "ranges": [{"type": "SEMVER", "events": [{"introduced": "1.2.0"}, {"fixed": "3.5.0"}]}]}]}
+        original = dep._peticion
+        dep._peticion = falsa
+        try:
+            informe = aimarkers.analizar_objetivo(self.url, opciones=self.opciones(seguridad=True, osv=True, dns=False)).seguridad
+        finally:
+            dep._peticion = original
+        jquery = [h for h in informe.a_dict()["hallazgos"] if h["id"] == "libreria-vulnerable" and "jQuery" in h["titulo"]][0]
+        self.assertIn("CVE-2020-11022", jquery["cve"])
+        self.assertIn("3.5.0", jquery["titulo"])
+        self.assertTrue(any("OSV.dev" in n for n in informe.notas))
+
+    def test_dependencias_vulnerables_osv(self):
+        import aimarkers_dependencias as dep
+        consultas = []
+
+        def falsa(ruta, datos=None):
+            consultas.append(ruta)
+            if ruta == "/querybatch":
+                return {"results": [{"vulns": [{"id": "GHSA-35jh-r3h4-6jhm"}, {"id": "GHSA-p6mc-m468-83gw"}]}
+                                    if q["package"] == {"ecosystem": "npm", "name": "lodash"} else {} for q in datos["queries"]]}
+            fijo = {"GHSA-35jh-r3h4-6jhm": ("CVE-2021-23337", "4.17.21"), "GHSA-p6mc-m468-83gw": ("CVE-2020-8203", "4.17.19")}
+            cve, version = fijo[ruta.rsplit("/", 1)[1]]
+            return {"id": ruta.rsplit("/", 1)[1], "aliases": [cve],
+                    "severity": [{"type": "CVSS_V3", "score": "CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:U/C:H/I:H/A:H"}],
+                    "affected": [{"package": {"ecosystem": "npm", "name": "lodash"},
+                                  "ranges": [{"type": "SEMVER", "events": [{"introduced": "0"}, {"fixed": version}]}]}]}
+        with tempfile.TemporaryDirectory() as tmp:
+            d = Path(tmp)
+            (d / "package-lock.json").write_text(json.dumps({"lockfileVersion": 3, "packages": {
+                "": {"name": "x"}, "node_modules/lodash": {"version": "4.17.15"}}}), encoding="utf-8")
+            (d / "requirements.txt").write_text("django==3.2.0\nrequests>=2\n", encoding="utf-8")
+            original = dep._peticion
+            dep._peticion = falsa
+            try:
+                res = aimarkers.analizar_objetivo(str(d), opciones=self.web.Opciones(seguridad=True, solo_seguridad=True))
+                sin_red = aimarkers.analizar_objetivo(str(d), opciones=self.web.Opciones(seguridad=True, solo_seguridad=True,
+                                                                                         osv=False))
+                dep._peticion = lambda *a, **k: (_ for _ in ()).throw(OSError("sin conexión"))
+                caida = aimarkers.analizar_objetivo(str(d), opciones=self.web.Opciones(seguridad=True, solo_seguridad=True))
+            finally:
+                dep._peticion = original
+        datos = res.seguridad.a_dict()
+        vulnerable = [h for h in datos["hallazgos"] if h["id"] == "dependencia-vulnerable"]
+        self.assertEqual(len(vulnerable), 1)
+        self.assertIn("lodash 4.17.15", vulnerable[0]["titulo"])
+        self.assertEqual(set(vulnerable[0]["cve"]), {"CVE-2021-23337", "CVE-2020-8203"})
+        self.assertIn("4.17.21", vulnerable[0]["evidencias"][0]["extracto"])  # la versión que corrige todos los avisos
+        self.assertEqual(vulnerable[0]["categoria"], "componentes")
+        self.assertEqual(consultas.count("/querybatch"), 1)
+        self.assertTrue(any("2 " in n and "OSV.dev" in n for n in res.seguridad.notas))
+        self.assertFalse(any(h["id"] == "dependencia-vulnerable" for h in sin_red.seguridad.a_dict()["hallazgos"]))
+        self.assertTrue(any("OSV.dev" in n for n in sin_red.seguridad.notas))
+        self.assertTrue(any("sin conexión" in n for n in caida.seguridad.notas))
+
+    def test_lectores_de_dependencias(self):
+        import aimarkers_dependencias as dep
+        casos = {
+            "yarn.lock": ('"@babel/core@^7.0.0", "@babel/core@^7.1":\n  version "7.1.0"\n\nlodash@^4:\n  version "4.17.20"\n',
+                          {("npm", "@babel/core", "7.1.0"), ("npm", "lodash", "4.17.20")}),
+            "go.mod": ("module a.b/c\n\ngo 1.21\n\nrequire (\n\tgolang.org/x/net v0.7.0\n)\n", {("Go", "golang.org/x/net", "0.7.0")}),
+            "Cargo.lock": ('[[package]]\nname = "smallvec"\nversion = "1.6.0"\n', {("crates.io", "smallvec", "1.6.0")}),
+            "Gemfile.lock": ("GEM\n  specs:\n    rack (2.0.1)\n      dep (>= 1)\n", {("RubyGems", "rack", "2.0.1")}),
+            "composer.lock": ('{"packages": [{"name": "a/b", "version": "v6.5.0"}]}', {("Packagist", "a/b", "6.5.0")}),
+            "poetry.lock": ('[[package]]\nname = "jinja2"\nversion = "2.10"\n\n[package.dependencies]\nx = "1"\n',
+                            {("PyPI", "jinja2", "2.10")}),
+            "requirements-dev.txt": ("flask[async]==2.0.1 ; python_version > '3.8'\nrequests>=2\n", {("PyPI", "flask", "2.0.1")}),
+            "package-lock.json": ("{roto", set()),
+        }
+        for nombre, (texto, esperado) in casos.items():
+            self.assertEqual(set(dep.extraer(nombre, texto)), esperado, nombre)
+        self.assertEqual(dep.cvss3_base("CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"), 9.8)
+        self.assertEqual(dep.cvss3_base("CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N"), 6.1)
+
+    def test_secretos_ocultos(self):
+        informe = self.seg.InformeSeguridad()
+        clave = "sk-ant-api03-" + "x" * 90
+        texto = f"DB = 'postgres://app:{'Pa55' * 3}@db.interno:5432/x'\nK = '{clave}'\nU = 'mysql://u:${{DB_PASS}}@h/x'\n"
+        self.seg.analizar_texto_codigo(informe, texto, "ajustes.py", "ajustes.py")
+        volcado = json.dumps(informe.a_dict())
+        self.assertIn("Database URL with password", volcado)
+        self.assertIn("Anthropic key", volcado)
+        self.assertNotIn("Pa55Pa55", volcado)
+        self.assertNotIn("x" * 20, volcado)
+        self.assertEqual(sum(1 for h in informe.hallazgos.values() if h.clave == "Database URL with password"), 1)
 
     def test_rastreo_respeta_robots_y_limite(self):
         SitioDePrueba.visitas.clear()

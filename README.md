@@ -7,7 +7,9 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)
 
-Command-line tool that looks for **AI markers** in source code, documentation, websites (HTML file or URL), **images** (C2PA Content Credentials, IPTC, EXIF and generation parameters) and Git repositories. It scores each sign by level and produces a report with the evidence, in English or Spanish. It can also crawl a whole website and run a **security assessment** (OWASP Top 10:2025, MITRE ATT&CK, CVSS v4.0 and a CIA risk matrix).
+Command-line tool that looks for **AI markers** in source code, documentation, websites (HTML file or URL), **images** (C2PA Content Credentials, IPTC, EXIF and generation parameters) and Git repositories. It scores each sign by level and produces a report with the evidence, in English or Spanish. It can also crawl a whole website and run a **security assessment** (OWASP Top 10:2025, MITRE ATT&CK, CVSS v4.0 and a CIA risk matrix), including leaked secrets and **dependencies with known vulnerabilities** checked against OSV.dev.
+
+It does not ask a language model whether something "sounds like AI": it looks for **evidence you can check** (declarations, tool fingerprints and traits) and tells you where it found each one. [How it decides](#how-it-decides) explains the criteria.
 
 > Markers are signs, not proof. The tool helps you review; the conclusion is yours.
 
@@ -33,7 +35,10 @@ cd aimarkers
 python3 aimarkers.py --version
 ```
 
-Requirements: Python 3.9 or later and, to analyse history, `git` on the PATH. It only uses the standard library, so there are no dependencies to install. On Windows, see the next section. [`c2patool`](https://github.com/contentauth/c2pa-rs/tree/main/cli) is optional and only needed to verify C2PA signatures.
+Requirements: Python 3.9 or later and, to analyse history, `git` on the PATH. It only uses the standard library, so there are no dependencies to install. On Windows, see the next section. Optional extras:
+
+- [`c2patool`](https://github.com/contentauth/c2pa-rs/tree/main/cli), to verify C2PA signatures.
+- Pillow and NumPy, for the [pixel reading](#pixel-reading) of images: `python3 -m pip install pillow numpy` (with Homebrew: `"$(brew --prefix python@3.15)/bin/python3.15" -m pip install --user --break-system-packages pillow numpy`). Without them everything else works the same.
 
 ### Windows
 
@@ -132,9 +137,11 @@ The language applies to the console and the reports. Marker identifiers (`coauto
 | `--security` / `--security-only` | Add the security analysis / run only the security analysis |
 | `--active --authorized` | Active security mode, only with authorisation (see below) |
 | `--no-dns` | Skip the SPF, DMARC, DNSSEC and CAA checks |
+| `--no-osv` | Do not check dependencies and JavaScript libraries against OSV.dev |
+| `--no-pixels` | Skip the pixel reading of images |
 | `--cvss-threshold N` | Exit with code 3 if any security finding reaches CVSS N |
 
-Every option also has a Spanish name: `--evidencias`, `--umbral`, `--sin-imagenes`, `--silencioso`, `--sin-color`, `--rastrear`, `--max-paginas`, `--max-imagenes`, `--retardo`, `--seguridad`, `--solo-seguridad`, `--sin-dns`, `--activo`, `--autorizado`, `--umbral-cvss`.
+Every option also has a Spanish name: `--evidencias`, `--umbral`, `--sin-imagenes`, `--silencioso`, `--sin-color`, `--rastrear`, `--max-paginas`, `--max-imagenes`, `--retardo`, `--seguridad`, `--solo-seguridad`, `--sin-dns`, `--sin-osv`, `--sin-pixeles`, `--activo`, `--autorizado`, `--umbral-cvss`.
 
 ## Graphical interface
 
@@ -189,12 +196,33 @@ aimarkers https://example.com --crawl --max-images 200 --delay 1
 
 ![Security view of the aimarkers interface](docs/gui-security.png)
 
-**Code and files.** Hard-coded secrets and private keys, `.env` files, possible SQL and command injection, `eval`, insecure deserialisation, DOM XSS, disabled TLS verification, weak cryptography, non-cryptographic randomness for secrets, debug mode, silenced exceptions, unpinned dependencies, `curl | sh`, GitHub Actions not pinned to a SHA and containers running as root. These are pattern-based checks: they point to lines worth reviewing, not confirmed vulnerabilities.
+**Code and files.** Hard-coded secrets (AWS, Google, Stripe, GitHub, GitLab, Slack, SendGrid, OpenAI, Anthropic, Hugging Face, npm, PyPI, Azure Storage, Twilio, Shopify, Mailchimp, Telegram bots, Teams and Discord webhooks, database URLs with a password, generic `password = "…"` assignments) and private keys, always shown truncated in the report, `.env` files, possible SQL and command injection, `eval`, insecure deserialisation, DOM XSS, disabled TLS verification, weak cryptography, non-cryptographic randomness for secrets, debug mode, silenced exceptions, unpinned dependencies, `curl | sh`, GitHub Actions not pinned to a SHA and containers running as root. These are pattern-based checks: they point to lines worth reviewing, not confirmed vulnerabilities.
+
+**Dependencies with known vulnerabilities (OSV.dev).** aimarkers reads the exact versions in `requirements*.txt`, `poetry.lock`, `uv.lock`, `pdm.lock`, `Pipfile.lock`, `package-lock.json`, `npm-shrinkwrap.json`, `yarn.lock`, `composer.lock`, `Gemfile.lock`, `go.mod`, `Cargo.lock` and `packages.lock.json`, and checks them against [OSV.dev](https://osv.dev), the open vulnerability database that gathers GitHub, PyPI, npm, Go, RustSec and other advisories. For each vulnerable package it shows the advisories (CVE or GHSA), the worst published severity and the version that fixes all of them. On websites, the JavaScript libraries it detects are checked too, which completes its built-in list. Only the ecosystem, name and version of each package are sent, never code or paths; `--no-osv` (or **Query public databases** in the interface) turns it off. Whether the vulnerable part is actually used is up to you to check.
 
 ```bash
 aimarkers https://my-site.example --security --crawl --html report.html
 aimarkers ~/Projects/my-app --security-only --cvss-threshold 7     # exit code 3 if any finding reaches 7.0
 ```
+
+## How it decides
+
+aimarkers does not use a model to guess whether something "sounds like AI". Those classifiers flag formal writers and non-native speakers, and a light rewrite fools them. Instead it looks for three kinds of evidence, each tied to a place in the content you can open and check:
+
+| Kind | What it is | Examples | Level |
+| --- | --- | --- | --- |
+| **Declarations** | The content or its metadata says it was made with AI | C2PA or IPTC `trainedAlgorithmicMedia`; Stable Diffusion or ComfyUI parameters in a PNG; `Co-Authored-By: Claude`; `🤖 Generated with…`; `utm_source=chatgpt.com`; ChatGPT citation residue (`oaicite`) | Explicit |
+| **Tool fingerprints** | Traces left by a specific tool | `CLAUDE.md`, `.cursorrules`, `claude/…` branches, `data-lov-id` (Lovable), generator names in EXIF, chat leftovers ("Sure! Here is the updated…") | Strong |
+| **Traits** | Habits frequent in generated content, but also found in human work | "In a real application…" comments, `your_api_key_here`, emojis in logs, stock phrases, em dashes, uniform rhythm; in images, the pixel reading | Medium or weak |
+
+What it reads depends on the type of content:
+
+- **Code, text and web pages**: the content itself (declarations, fingerprints and traits) and, on websites, the HTML structure and embedded data. Writing style only counts above 150 words and by density, never for a single word.
+- **Images**: first their metadata (C2PA, IPTC, EXIF, PNG text), which is the only thing that can give a firm answer; then, if Pillow and NumPy are installed, a [pixel reading](#pixel-reading) that can only add weak or medium signs.
+- **Git repositories**: commit trailers and footers, bot authors, agent branches and agent instruction files.
+- **Office documents and PDF** (`.docx`, `.pdf`…): not read yet. Export the text to `.txt` or `.md` to analyse it.
+
+A single explicit marker is enough to say the content declares AI involvement. Traits on their own only ever reach "weak signs" or "likely assistance", and the absence of markers proves nothing.
 
 ## Scoring
 
@@ -248,6 +276,21 @@ A C2PA manifest **without** an AI declaration (for example, a camera photo) does
 
 **Images on websites.** In URL mode, aimarkers downloads up to 15 images from the page (`<img src>`, `og:image`, `twitter:image`), over http(s) only and up to 15 MB each, into a temporary folder that is deleted afterwards. With a local HTML file it only analyses images inside the HTML file's folder. `--no-images` turns both off.
 
+### Pixel reading
+
+Metadata is lost when an image is screenshotted, re-saved or uploaded to most social networks, so aimarkers also measures the image itself. It is not a trained classifier: it takes three classic forensic readings on a 1024×1024 crop from the centre, without resizing (resizing would erase what it measures).
+
+| Reading | What it measures | Signal when |
+| --- | --- | --- |
+| Sensor noise | Spread of the high-frequency residual (each pixel minus the mean of its four neighbours) in 16×16 blocks. Cameras leave noise even on smooth areas | median < 0.8 and quietest 10 % < 0.5 |
+| Periodic trace | Peak, in the averaged spectrum of that residual, on the 8-pixel grid where diffusion decoders (VAE) and GANs upsample | ≥ 3.5 |
+| Size | Matches a common generator output (512×512, 1024×1024, 1024×1792, 1344×768…) | only adds to another signal |
+| Camera | Make and model in EXIF | if present, nothing is scored |
+
+One signal adds a weak marker (3 points) and two add a medium one (8 points); the pixel reading never reaches strong or explicit. Screenshots, logos and flat graphics are skipped, and so are images under 256 px.
+
+**How reliable it is.** The thresholds were set on 32 real photos (cameras, COCO, PASCAL VOC and classic test images) and 29 single generated images (Stable Diffusion 1.x, SDXL, FLUX, DALL·E 2 and ProGAN), also recompressed as JPEG at quality 90. With them, **no real photo was flagged** and **about 1 in 4 generated images was** (7–8 of 29). A "normal" reading therefore does not mean the image is real. It is a small sample: take it as an indication. CGI renders and heavily retouched or denoised photos can show "no sensor noise". For a firmer answer, look for the original, check its C2PA credentials, or use a detector trained on recent generators.
+
 ## Excluding files
 
 Add `aimarkers: ignore-file` in the first lines of a file to skip it. `aimarkers.py` itself uses it, because it contains every pattern it looks for.
@@ -267,7 +310,7 @@ For development, install the analysis tools with pinned versions and hashes:
 ```bash
 python3 -m pip install --require-hashes --no-deps -r requirements-dev.txt
 ruff check .
-bandit -c pyproject.toml -r aimarkers.py aimarkers_gui.py aimarkers_web.py aimarkers_seguridad.py cvss4.py
+bandit -c pyproject.toml -r aimarkers*.py cvss4.py
 ```
 
 Validation done: the Python standard library (11,630 files) scores 3/100; 400 system images give no false positives; a real website with 144 records loaded in 5 minutes is detected as a burst; the `psf/requests` repository scores 48/100 because of a real March 2026 commit with `Co-Authored-By: Claude Opus 4.6`.
@@ -281,6 +324,7 @@ The rules are at the top of `aimarkers.py`, in lists of `(id, level, pattern)` t
 - `REGLAS_CODIGO_LINEA`: line by line in code.
 - `REGLAS_HTML`: websites.
 - `RE_GENERADOR_META`: generator names in image metadata.
+- `aimarkers_pixeles.py`: pixel reading thresholds; `aimarkers_dependencias.py`: lock file readers and the OSV.dev client.
 - `gui/`: graphical interface (HTML, CSS and JavaScript with no dependencies) served by `aimarkers_gui.py`.
 - `MULETILLAS_ES` / `MULETILLAS_EN`: stock phrases (they only count by density).
 - `FICHEROS_AGENTE` / `DIRS_AGENTE`: agent file and folder names.
@@ -294,7 +338,8 @@ aimarkers is designed to analyse untrusted content. It runs `git` with a hardene
 ## Limitations
 
 - It does not check whether code calls invented APIs: that requires running it or checking it against the documentation.
-- It does not detect AI images from their pixels, only from their metadata. Nor does it read invisible watermarks such as SynthID.
+- Without metadata, it can only give weak or medium signs about an image, and it misses most generated images (see [pixel reading](#pixel-reading)). It does not read invisible watermarks such as SynthID.
+- It does not read Office documents or PDF files yet.
 - The absence of markers does not prove human authorship: trailers and footers can be removed, text can be rewritten and metadata can be stripped.
 - The security analysis is automated and non-intrusive: it does not replace an audit or a penetration test, and its CVSS scores start from typical vectors that you should review.
 - URLs that need JavaScript to render content are analysed only by their initial HTML. In that case, save the page from the browser and analyse the file.

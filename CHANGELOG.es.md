@@ -4,6 +4,14 @@
 
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [1.6.0] - 2026-11-11
+
+### Añadido
+- Lectura de píxeles de las imágenes (opcional, con Pillow y NumPy): ruido de sensor, huella periódica en la rejilla de 8 píxeles y tamaños de salida de generadores, con la marca y el modelo de la cámara como contraindicio. Solo añade marcadores débiles o medios, con umbrales que no marcaron ninguna foto real en el conjunto de calibración. Se muestra como tabla en la interfaz y en los informes; `--sin-pixeles` la desactiva.
+- Dependencias con vulnerabilidades conocidas: lee las versiones exactas de `requirements*.txt`, `poetry.lock`, `uv.lock`, `pdm.lock`, `Pipfile.lock`, `package-lock.json`, `npm-shrinkwrap.json`, `yarn.lock`, `composer.lock`, `Gemfile.lock`, `go.mod`, `Cargo.lock` y `packages.lock.json` y las contrasta con OSV.dev, con los avisos, la peor severidad y la versión que lo corrige. También contrasta las librerías JavaScript detectadas en las webs. `--sin-osv` lo desactiva; la interfaz tiene la opción **Consultar bases públicas** para DNS y OSV.dev.
+- Más secretos detectados en código y webs: Anthropic, Hugging Face, GitLab, npm, PyPI, Azure Storage, Twilio, Shopify, Mailchimp, bots de Telegram, webhooks de Teams y Discord y URL de bases de datos con contraseña (la contraseña nunca se muestra).
+- README: nueva sección «Cómo decide» que explica los tres tipos de evidencia y qué se lee en cada tipo de contenido.
+
 ## [1.5.0] - 2026-11-11
 
 ### Añadido

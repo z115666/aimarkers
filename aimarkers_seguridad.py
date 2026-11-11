@@ -80,6 +80,16 @@ MITRE = {
 
 TEXTOS = {
     "seg.titulo": ("Seguridad", "Security"),
+    "seg.osv_error": ("No se ha podido consultar OSV.dev ({e}); las dependencias no se han contrastado con avisos de seguridad.",
+                      "OSV.dev could not be queried ({e}); dependencies were not checked against security advisories."),
+    "seg.osv_resumen": ("Dependencias contrastadas con OSV.dev: {n} versiones exactas, {v} con avisos de seguridad.",
+                        "Dependencies checked against OSV.dev: {n} exact versions, {v} with security advisories."),
+    "seg.osv_web": ("Librerías JavaScript contrastadas con OSV.dev: {n}, {v} con avisos.",
+                    "JavaScript libraries checked against OSV.dev: {n}, {v} with advisories."),
+    "seg.osv_limite": ("Solo se han consultado las primeras {n} dependencias.", "Only the first {n} dependencies were checked."),
+    "seg.osv_desactivado": ("Se han encontrado {n} dependencias con versión exacta, pero no se han consultado porque la consulta a OSV.dev está desactivada.",
+                            "{n} dependencies with exact versions were found but not checked because OSV.dev lookups are turned off."),
+    "seg.dep_evidencia": ("{n} aviso(s) en {e}: {ids}. Versión corregida: {f}", "{n} advisory(ies) in {e}: {ids}. Fixed version: {f}"),
     "seg.contexto": ("Contexto", "Context"),
     "seg.contexto_ninguno": ("web informativa, sin formularios sensibles", "informational site, no sensitive forms"),
     "seg.contexto_ficheros": ("código y ficheros (contexto de uso desconocido)", "code and files (usage context unknown)"),
@@ -630,6 +640,15 @@ CATALOGO = {
         ("Capturar errores sin tratarlos ni registrarlos oculta fallos y ataques.", "Catching errors without handling or logging them hides failures and attacks."),
         ("Captura excepciones concretas, regístralas y falla de forma segura.", "Catch specific exceptions, log them and fail safely."),
         "A10", [390, 703], ["T1565"], "AV:N/AC:H/AT:P/PR:N/UI:N/VC:N/VI:L/VA:L/SC:N/SI:N/SA:N"),
+    "dependencia-vulnerable": _c(
+        ("Dependencia con vulnerabilidades conocidas", "Dependency with known vulnerabilities"),
+        ("La versión fijada en el fichero de dependencias tiene avisos de seguridad publicados (OSV.dev). El riesgo real "
+         "depende de si el proyecto usa la parte afectada, pero los exploits públicos suelen aparecer poco después del aviso.",
+         "The version pinned in the dependency file has published security advisories (OSV.dev). The real risk depends on "
+         "whether the project uses the affected part, but public exploits often appear soon after the advisory."),
+        ("Actualiza a la versión corregida indicada, regenera el fichero de bloqueo y vuelve a probar la aplicación.",
+         "Update to the fixed version shown, regenerate the lock file and test the application again."),
+        "A03", [1395, 1104], ["T1195.001", "T1190"], "AV:N/AC:L/AT:P/PR:N/UI:P/VC:L/VI:L/VA:N/SC:N/SI:N/SA:N", e="P"),
     "dependencia-sin-fijar": _c(
         ("Dependencias sin versión fijada", "Dependencies without pinned versions"),
         ("Cada instalación puede traer una versión distinta, incluida una comprometida.",
@@ -671,7 +690,7 @@ for _cat, _ids in {
     "sesion": "cookie-sin-secure cookie-sin-httponly cookie-sin-samesite sin-csrf password-get panel-admin xmlrpc "
               "usuarios-enumerables cors-reflejado",
     "contenido": "contenido-mixto contenido-mixto-pasivo formulario-inseguro tabnabbing",
-    "componentes": "sin-sri libreria-vulnerable libreria-sin-soporte cms-version dependencia-sin-fijar accion-sin-fijar "
+    "componentes": "sin-sri libreria-vulnerable libreria-sin-soporte cms-version dependencia-vulnerable dependencia-sin-fijar accion-sin-fijar "
                    "imagen-latest descarga-ejecutada contenedor-root",
     "exposicion": "version-expuesta emails-expuestos comentarios-sensibles error-detallado listado-directorios secreto-expuesto "
                   "source-map robots-sensible sin-security-txt git-expuesto env-expuesto copia-expuesta config-expuesta info-servidor",
@@ -743,9 +762,33 @@ SECRETOS = [
     ("Slack token", re.compile(r"\bxox[abposr]-[0-9A-Za-z-]{10,}\b")),
     ("Slack webhook", re.compile(r"https://hooks\.slack\.com/services/T[0-9A-Z]{6,}/B[0-9A-Z]{6,}/[0-9A-Za-z]{20,}")),
     ("SendGrid key", re.compile(r"\bSG\.[0-9A-Za-z_-]{22}\.[0-9A-Za-z_-]{43}\b")),
-    ("OpenAI key", re.compile(r"\bsk-(?:proj-)?[A-Za-z0-9_-]{32,}\b")),
-    ("Private key", re.compile(r"-----BEGIN (?:RSA |EC |DSA |OPENSSH |ENCRYPTED )?PRIVATE KEY-----")),
+    ("Anthropic key", re.compile(r"\bsk-ant-(?:api|admin)\d{2}-[A-Za-z0-9_-]{80,}")),
+    ("OpenAI key", re.compile(r"\bsk-(?!ant-)(?:proj-|svcacct-|admin-)?[A-Za-z0-9_-]{32,}\b")),
+    ("Hugging Face token", re.compile(r"\bhf_[A-Za-z]{34}\b")),
+    ("GitLab token", re.compile(r"\bglpat-[A-Za-z0-9_-]{20,}\b")),
+    ("npm token", re.compile(r"\bnpm_[A-Za-z0-9]{36}\b")),
+    ("PyPI token", re.compile(r"\bpypi-AgEIcHlwaS5vcmc[A-Za-z0-9_-]{50,}")),
+    ("Azure Storage key", re.compile(r"AccountKey=[A-Za-z0-9+/]{86}==")),
+    ("Microsoft Teams webhook", re.compile(r"https://[\w-]+\.webhook\.office\.com/webhook(?:b2)?/[\w@/-]{40,}")),
+    ("Discord webhook", re.compile(r"https://(?:ptb\.|canary\.)?discord(?:app)?\.com/api/webhooks/\d{17,20}/[\w-]{60,}")),
+    ("Telegram bot token", re.compile(r"\b\d{8,10}:AA[A-Za-z0-9_-]{33}\b")),
+    ("Twilio key", re.compile(r"\bSK[0-9a-f]{32}\b")),
+    ("Shopify token", re.compile(r"\bshp(?:at|ca|pa|ss)_[a-fA-F0-9]{32}\b")),
+    ("Mailchimp key", re.compile(r"\b[0-9a-f]{32}-us\d{1,2}\b")),
+    ("Database URL with password", re.compile(
+        r"\b(?:postgres(?:ql)?|mysql|mariadb|mongodb(?:\+srv)?|redis|rediss|amqps?|mssql|sqlserver)://"
+        r"[^:\s/@\"']{1,64}:(?!(?:password|pass|secret|changeme|\*+|\$\{?\w+\}?|<[^>]+>|xxx+)@)[^@\s/\"']{3,128}@[\w.-]+", re.I)),
+    ("Private key", re.compile(r"-----BEGIN (?:RSA |EC |DSA |OPENSSH |ENCRYPTED |PGP )?PRIVATE KEY(?: BLOCK)?-----")),
 ]
+
+
+def ocultar(nombre: str, valor: str) -> str:
+    """Muestra lo justo para localizar el secreto sin reproducirlo en el informe."""
+    if nombre == "Database URL with password":
+        return re.sub(r"(://[^:/@]+:)[^@]+@", r"\1•••@", valor)
+    if nombre.endswith("webhook"):
+        return valor[:valor.find("/", 8) + 1] + "…" if "/" in valor[8:] else valor[:20] + "…"
+    return valor[:8] + "…" if len(valor) > 12 else valor[:3] + "…"
 RE_SECRETO_GENERICO = re.compile(
     r"(?i)\b\w*?(password|passwd|pwd|contrase(?:ñ|n)a|secret|api[_-]?key|apikey|access[_-]?token|auth[_-]?token|client[_-]?secret)\b"
     r"[\"']?\s*[:=]\s*[\"']([^\"'\s]{8,120})[\"']")
@@ -1010,7 +1053,7 @@ def buscar_secretos(informe: InformeSeguridad, texto: str, ubic: str, id_: str =
         m = patron.search(texto)
         if m:
             valor = m.group(0)
-            oculto = valor[:8] + "…" if len(valor) > 12 else valor
+            oculto = ocultar(nombre, valor)
             if nombre == "Private key":
                 informe.anadir("clave-privada" if id_ == "secreto-codigo" else id_, ubic, valor, clave=nombre, detalle=nombre)
             else:
@@ -1437,6 +1480,9 @@ def analizar_web(rastreo: web.Rastreo, opciones: web.Opciones) -> InformeSegurid
             analizar_html_seguridad(informe, p.texto(), p.url, ubic)
     for js in rastreo.scripts_propios():
         analizar_js_seguridad(informe, js.texto(), js.url)
+    if getattr(opciones, "osv", True):
+        import aimarkers_dependencias
+        aimarkers_dependencias.revisar_librerias_web(informe)
     # robots.txt y security.txt
     if rastreo.robots_txt:
         sensibles = re.findall(r"(?im)^\s*Disallow:\s*(\S*(?:admin|backup|bak|private|privado|secret|config|old|test|dev|staging)\S*)",
@@ -1555,7 +1601,8 @@ def analizar_texto_codigo(informe: InformeSeguridad, texto: str, nombre: str, ub
             linea, contenido = _linea(texto, m.start())
             id_ = "clave-privada" if nombre_secreto == "Private key" else "secreto-codigo"
             valor = m.group(0)
-            informe.anadir(id_, f"{ubic}:{linea}", f"{nombre_secreto}: {valor[:8]}…", clave=nombre_secreto, detalle=nombre_secreto)
+            informe.anadir(id_, f"{ubic}:{linea}", f"{nombre_secreto}: {ocultar(nombre_secreto, valor)}", clave=nombre_secreto,
+                           detalle=nombre_secreto)
     if ext not in (".md", ".txt", ".html", ".htm"):
         for m in RE_SECRETO_GENERICO.finditer(texto):
             valor = m.group(2)
@@ -1582,30 +1629,41 @@ def analizar_texto_codigo(informe: InformeSeguridad, texto: str, nombre: str, ub
                 break
 
 
-def analizar_ficheros(rutas: list[Path], raiz: Path) -> InformeSeguridad:
+def analizar_ficheros(rutas: list[Path], raiz: Path, opciones=None) -> InformeSeguridad:
+    import aimarkers_dependencias as dependencias
     informe = InformeSeguridad(contexto=Contexto(ficheros=True))
     omitidos = 0
+    paquetes: dict[tuple[str, str, str], str] = {}
     for indice, ruta in enumerate(rutas):
         if indice % 10 == 0:
             aimarkers.informar("codigo", indice, len(rutas), ruta.name)
         nombre = ruta.name
         ext = ruta.suffix.lower()
-        if not (ext in EXT_REVISABLES or nombre.lower() in ("dockerfile", ".env", "package.json", "id_rsa", "id_dsa", "id_ecdsa",
-                                                             "id_ed25519") or nombre.startswith(".env")):
+        es_dependencias = dependencias.lector(nombre) is not None
+        if not (ext in EXT_REVISABLES or es_dependencias or nombre.lower() in ("dockerfile", ".env", "package.json", "id_rsa",
+                                                                                "id_dsa", "id_ecdsa", "id_ed25519")
+                or nombre.startswith(".env")):
             continue
         texto = aimarkers.leer_fichero(ruta)
         if texto is None:
-            continue
-        if "aimarkers: ignore-file" in texto[:2000]:
-            omitidos += 1
             continue
         try:
             ubic = str(ruta.relative_to(raiz)) if ruta != raiz else ruta.name
         except ValueError:
             ubic = ruta.name
+        if es_dependencias:
+            for paquete in dependencias.extraer(nombre, texto):
+                paquetes.setdefault(paquete, ubic)
+        if "aimarkers: ignore-file" in texto[:2000]:
+            omitidos += 1
+            continue
         analizar_texto_codigo(informe, texto, nombre, ubic)
         if ext in aimarkers.EXT_HTML:
             analizar_html_seguridad(informe, texto, "", ubic)
+    if paquetes and getattr(opciones, "osv", True):
+        dependencias.revisar(informe, paquetes)
+    elif paquetes:
+        informe.notas.append(aimarkers.t("seg.osv_desactivado", n=len(paquetes)))
     if omitidos:
         informe.notas.append(aimarkers.t("nota.ignorado", u=f"{omitidos} ficheros" if aimarkers.idioma() == "es" else f"{omitidos} files"))
     return informe

@@ -34,6 +34,8 @@
           <label class="interruptor"><input type="checkbox" id="op-ia" checked><span data-i18n="op-ia">Marcadores de IA</span></label>
           <label class="interruptor"><input type="checkbox" id="op-seguridad"><span data-i18n="op-seguridad">Seguridad (OWASP, MITRE, CVSS)</span></label>
           <label class="interruptor"><input type="checkbox" id="imagenes-web" checked><span data-i18n="imagenes-web">Imágenes de las webs</span></label>
+          <label class="interruptor"><input type="checkbox" id="op-consultas" checked><span data-i18n="op-consultas">Consultar bases públicas (DNS y OSV.dev)</span></label>
+          <p class="ayuda" data-i18n="op-consultas-ayuda">Solo se envían el dominio y el nombre y la versión de cada dependencia, nunca tu código.</p>
         </fieldset>
         <fieldset>
           <legend data-i18n="op-webs">Webs</legend>
@@ -72,6 +74,7 @@
     <ol id="lista-casos"></ol>
     <p class="casos-vacio" id="casos-vacio" data-i18n="casos-vacio">Cada análisis queda aquí hasta que cierres aimarkers.</p>
     <div class="estado-c2pa" id="estado-c2pa"></div>
+    <div class="estado-c2pa" id="estado-pixeles"></div>
   </aside>
 
   <main id="banco" class="banco" tabindex="-1">
@@ -167,6 +170,14 @@
       <div id="r-grupos" class="grupos"></div>
       <ol id="r-ubicaciones" class="ubicaciones" hidden></ol>
       <p class="sin-hallazgos" id="r-vacio" hidden data-i18n="sin-hallazgos">No hay marcadores. Recuerda que su ausencia no demuestra autoría humana.</p>
+      <section class="seg-anexo pixeles" id="r-pixeles" hidden>
+        <h3 data-i18n="px-titulo">Lectura de píxeles</h3>
+        <p class="ayuda" data-i18n="px-ayuda">Medidas sobre la propia imagen, no sobre sus metadatos. Umbrales conservadores: una foto real casi nunca da positivo, pero muchas imágenes generadas tampoco.</p>
+        <table class="tabla-anexo tabla-pixeles">
+          <thead><tr><th data-i18n="px-imagen">Imagen</th><th data-i18n="px-ruido">Ruido de sensor</th><th data-i18n="px-periodico">Huella periódica</th><th data-i18n="px-tamano">Tamaño</th></tr></thead>
+          <tbody id="r-pixeles-filas"></tbody>
+        </table>
+      </section>
 
       <section class="seguridad" id="r-seguridad" hidden aria-labelledby="seg-titulo">
         <h2 class="seg-titulo" id="seg-titulo" data-i18n="seg-titulo">Seguridad</h2>

@@ -150,6 +150,8 @@ def resultado_para_interfaz(res: aimarkers.Resultado, nombre: str | None = None)
     datos["tipo_nombre"] = aimarkers.t("tipo." + res.tipo)
     datos["valoracion"] = res.banda()
     datos["solo_seguridad"] = res.solo_seguridad
+    datos["pixeles"] = aimarkers.tabla_pixeles(res)
+    datos.pop("lecturas_imagen", None)
     ubicaciones: dict[str, dict] = {}
     for h in res.hallazgos:
         clave = h.ubicacion.rsplit(":", 1)[0] if re.search(r":\d+$", h.ubicacion) else h.ubicacion
@@ -238,6 +240,7 @@ class Manejador(BaseHTTPRequestHandler):
                 return self._error(HTTPStatus.FORBIDDEN, "token")
             return self._json({"version": aimarkers.VERSION, "idioma": aimarkers.idioma(), "forzado": ESTADO.idioma_forzado,
                                "c2patool": shutil.which("c2patool") is not None,
+                               "pixeles": __import__("aimarkers_pixeles").disponible(),
                                "selector": hay_selector_nativo()})
         return self._error(HTTPStatus.NOT_FOUND, "not found")
 
@@ -305,7 +308,8 @@ class Manejador(BaseHTTPRequestHandler):
             max_paginas=_entero(datos.get("max_paginas"), 0, -1, 1_000_000), retardo=0.3,
             seguridad=bool(datos.get("seguridad")) or bool(datos.get("solo_seguridad")),
             solo_seguridad=bool(datos.get("solo_seguridad")), activo=bool(datos.get("activo")),
-            autorizado=bool(datos.get("autorizado")), progreso=_avance)
+            autorizado=bool(datos.get("autorizado")), dns=bool(datos.get("consultas", True)),
+            osv=bool(datos.get("consultas", True)), progreso=_avance)
         if opciones.activo and not opciones.autorizado:
             return self._error(HTTPStatus.BAD_REQUEST, "authorization")
         objetivos = []
@@ -396,9 +400,11 @@ def plan_fases(es_url: bool, op) -> list[tuple[str, float]]:
     if es_url:
         fases = [("descarga", 40 if op.rastrear else 12), ("ia", 8 if ia else 0), ("imagenes", 25 if ia and op.imagenes else 0),
                  ("scripts", 10 if op.seguridad else 0), ("seguridad", 10 if op.seguridad else 0),
+                 ("dependencias", 4 if op.seguridad and op.osv else 0),
                  ("dns", 6 if op.seguridad and op.dns else 0), ("activo", 20 if op.activo and op.autorizado else 0)]
     else:
-        fases = [("ficheros", 60 if ia else 0), ("git", 15 if ia else 0), ("codigo", 30 if op.seguridad else 0)]
+        fases = [("ficheros", 60 if ia else 0), ("git", 15 if ia else 0), ("codigo", 30 if op.seguridad else 0),
+                 ("dependencias", 12 if op.seguridad and op.osv else 0)]
     fases = [(f, w) for f, w in fases if w]
     total = sum(w for _, w in fases) or 1
     return [(f, w / total) for f, w in fases]

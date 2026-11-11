@@ -6,6 +6,7 @@
 
 | Version | Supported |
 | --- | --- |
+| 1.6.x | Yes |
 | 1.5.x | Yes |
 | 1.4.x | Yes |
 | 1.3.x | Yes |
@@ -36,9 +37,11 @@ aimarkers is meant to analyse **untrusted** content: third-party repositories, w
 | Graphical interface (`--gui`) attacked from another website or tab | Listens on 127.0.0.1 only; 256-bit token in the URL fragment, required in a header; `Host` and `Origin` checks against DNS rebinding and CSRF; strict CSP without inline scripts; static files from a closed list; uploads limited and sanitised into a temporary folder deleted on exit |
 | Crawling a whole website | Same site and http(s) only, `robots.txt` and `nofollow` respected, pause between requests, size limits per file and 2 GB in total; everything in a temporary folder deleted at the end, even after errors |
 | Misuse of the active security mode against third parties | Off by default; requires `--active` and an explicit `--authorized` declaration (a confirmation box in the interface). It only requests well-known paths: no injection payloads, credentials or exploits |
-| Leaking secrets found during the analysis | Keys and tokens are shown truncated in reports |
+| Leaking secrets found during the analysis | Keys and tokens are shown truncated in reports; passwords in database URLs are replaced with `•••` |
+| Decoding images for the pixel reading | Optional and only if Pillow and NumPy are installed. Pillow's limit is set to 50 megapixels (decompression bombs are rejected), only a 1024×1024 crop is converted to numbers, and any decoding error just skips the reading. Keep Pillow up to date: it is the part that parses untrusted image data |
+| Queries to OSV.dev | Fixed HTTPS address (`api.osv.dev`), 20 s timeout, responses limited to 8 MB and validated as JSON; advisory IDs are checked against a strict pattern before being used in a URL; at most 3,000 packages and 200 advisories per analysis; a failure only adds a note |
 | Report injection | The HTML report escapes all analysed content and contains no scripts; Markdown escapes HTML and pipes |
-| Supply chain | No runtime dependencies (standard library only). GitHub Actions pinned by commit hash and development tools installed with `--require-hashes`. The Homebrew formula points to a specific commit with its SHA-256 |
+| Supply chain | No required runtime dependencies (standard library only; Pillow and NumPy are optional). GitHub Actions pinned by commit hash and development tools installed with `--require-hashes`. The Homebrew formula points to a specific commit with its SHA-256 |
 
 ## Accepted risks
 
@@ -55,4 +58,4 @@ aimarkers is meant to analyse **untrusted** content: third-party repositories, w
 
 ## Privacy
 
-aimarkers sends no data anywhere except to the URL you ask it to analyse, its images and its `/llms.txt`, and, in the security analysis, the domain name to a DNS over HTTPS resolver (Cloudflare, or Google as fallback) to check SPF, DMARC, DNSSEC and CAA; `--no-dns` turns this off. Use `--no-images` if you do not want images downloaded. Reports may contain excerpts of the analysed content, including prompts stored in images: treat them as confidentially as the original. That is why `.gitignore` excludes generated reports.
+aimarkers sends no data anywhere except to the URL you ask it to analyse, its images and its `/llms.txt`, and, in the security analysis, the domain name to a DNS over HTTPS resolver (Cloudflare, or Google as fallback) to check SPF, DMARC, DNSSEC and CAA (`--no-dns` turns this off), and the ecosystem, name and version of the dependencies and JavaScript libraries it finds to OSV.dev, to check them for known vulnerabilities (`--no-osv` turns this off). It never sends code, file contents or paths. Use `--no-images` if you do not want images downloaded. Reports may contain excerpts of the analysed content, including prompts stored in images: treat them as confidentially as the original. That is why `.gitignore` excludes generated reports.
