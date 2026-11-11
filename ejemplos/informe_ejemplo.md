@@ -1,6 +1,6 @@
 # Informe de marcadores de IA
 
-Generado con aimarkers 1.1.0 el 10/11/2026 20:27.
+Generado con aimarkers 1.3.0 el 11/11/2026 09:33.
 
 > Los marcadores son indicios, no pruebas. Revisa cada evidencia antes de sacar conclusiones; la ausencia de marcadores tampoco demuestra autoría humana.
 

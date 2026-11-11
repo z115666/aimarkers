@@ -26,6 +26,31 @@
     <input id="objetivo" name="objetivo" type="text" spellcheck="false" data-i18n-placeholder="placeholder">
     <button type="button" class="boton secundario" id="elegir-fichero" data-i18n="elegir-fichero">Elegir archivo</button>
     <button type="button" class="boton secundario" id="elegir-carpeta" data-i18n="elegir-carpeta">Elegir carpeta</button>
+    <details class="opciones" id="opciones">
+      <summary class="boton secundario"><span data-i18n="opciones">Opciones</span><span class="opciones-cuenta" id="opciones-cuenta"></span></summary>
+      <div class="opciones-panel" role="group" data-i18n-aria="opciones">
+        <fieldset>
+          <legend data-i18n="op-que">Qué analizar</legend>
+          <label class="interruptor"><input type="checkbox" id="op-ia" checked><span data-i18n="op-ia">Marcadores de IA</span></label>
+          <label class="interruptor"><input type="checkbox" id="op-seguridad"><span data-i18n="op-seguridad">Seguridad (OWASP, MITRE, CVSS)</span></label>
+          <label class="interruptor"><input type="checkbox" id="imagenes-web" checked><span data-i18n="imagenes-web">Imágenes de las webs</span></label>
+        </fieldset>
+        <fieldset>
+          <legend data-i18n="op-webs">Webs</legend>
+          <label class="interruptor"><input type="checkbox" id="op-rastrear"><span data-i18n="op-rastrear">Rastrear todo el sitio</span></label>
+          <label class="campo" for="op-max-paginas"><span data-i18n="op-max-paginas">Máximo de páginas</span>
+            <input type="number" id="op-max-paginas" min="-1" max="1000000" step="1" inputmode="numeric" placeholder="2000"></label>
+          <p class="ayuda" data-i18n="op-rastrear-ayuda">Se descarga a una carpeta temporal que se borra al terminar. Respeta robots.txt; −1 sin límite.</p>
+        </fieldset>
+        <fieldset>
+          <legend data-i18n="op-activo-t">Modo activo</legend>
+          <label class="interruptor"><input type="checkbox" id="op-activo"><span data-i18n="op-activo">Comprobar rutas sensibles (.git, .env, copias…)</span></label>
+          <label class="confirmar" id="op-autorizado-fila" hidden><input type="checkbox" id="op-autorizado">
+            <span data-i18n="op-autorizado">Confirmo que tengo autorización del responsable de esta web para analizarla.</span></label>
+          <p class="ayuda" data-i18n="op-activo-ayuda">Sin permiso puede ser delito (art. 197 bis del Código Penal). No se envían ataques: solo peticiones a rutas conocidas.</p>
+        </fieldset>
+      </div>
+    </details>
     <button type="submit" class="boton primario" id="analizar" data-i18n="analizar">Analizar</button>
     <input id="selector-ficheros" type="file" multiple hidden>
   </form>
@@ -59,10 +84,6 @@
           <li><strong data-i18n="cap-imagen-t">Imágenes</strong><span data-i18n="cap-imagen">Credenciales C2PA, origen IPTC, EXIF y parámetros de Stable Diffusion o ComfyUI.</span></li>
           <li><strong data-i18n="cap-repo-t">Repositorios y webs</strong><span data-i18n="cap-repo">Coautorías en commits, ramas de agentes, constructores web y cargas masivas de datos.</span></li>
         </ul>
-        <label class="interruptor">
-          <input type="checkbox" id="imagenes-web" checked>
-          <span data-i18n="imagenes-web">Analizar también las imágenes de las webs</span>
-        </label>
       </div>
     </section>
 
@@ -93,6 +114,25 @@
 
       <div id="r-grupos" class="grupos"></div>
       <p class="sin-hallazgos" id="r-vacio" hidden data-i18n="sin-hallazgos">No hay marcadores. Recuerda que su ausencia no demuestra autoría humana.</p>
+
+      <section class="seguridad" id="r-seguridad" hidden aria-labelledby="seg-titulo">
+        <h2 class="seg-titulo" id="seg-titulo" data-i18n="seg-titulo">Seguridad</h2>
+        <p class="meta" id="seg-contexto"></p>
+        <div class="seg-resumen">
+          <div class="seg-cvss">
+            <span class="seg-cvss-cifra" id="seg-cvss">0.0</span>
+            <span class="seg-cvss-etiqueta"><span data-i18n="seg-cvss-max">CVSS v4.0 máximo</span><strong id="seg-severidad"></strong></span>
+          </div>
+          <div class="seg-triada" id="seg-triada" role="list"></div>
+          <figure class="seg-matriz">
+            <figcaption><span data-i18n="seg-matriz">Matriz de riesgos</span><small data-i18n="seg-ejes">Filas: probabilidad. Columnas: impacto.</small></figcaption>
+            <div class="matriz-rejilla" id="seg-matriz" role="table"></div>
+          </figure>
+        </div>
+        <div id="seg-grupos" class="grupos seg-grupos"></div>
+        <p class="sin-hallazgos" id="seg-vacio" hidden data-i18n="seg-sin">No se han encontrado fallos con las comprobaciones realizadas.</p>
+        <p class="aviso" data-i18n="seg-aviso">Evaluación automática y no intrusiva: no sustituye a una auditoría ni a una prueba de intrusión. El CVSS parte de vectores tipo para cada hallazgo y del contexto detectado.</p>
+      </section>
 
       <details class="notas" id="r-notas-bloque">
         <summary id="r-notas-titulo"></summary>

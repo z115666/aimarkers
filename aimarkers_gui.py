@@ -71,6 +71,7 @@ class Estado:
         self.resultados: dict[str, list] = {}
         self.cerrojo = threading.Lock()
         self.puerto = 0
+        self.progreso = ""
         self.idioma_forzado = False
 
     def limpiar(self) -> None:
@@ -145,6 +146,7 @@ def resultado_para_interfaz(res: aimarkers.Resultado, nombre: str | None = None)
     datos["grupos"] = grupos
     datos["tipo_nombre"] = aimarkers.t("tipo." + res.tipo)
     datos["valoracion"] = res.banda()
+    datos["solo_seguridad"] = res.solo_seguridad
     return datos
 
 
@@ -215,6 +217,10 @@ class Manejador(BaseHTTPRequestHandler):
                 return self._error(HTTPStatus.NOT_FOUND, "not found")
             extra = {"Cache-Control": "max-age=86400"} if fichero.startswith("fonts/") else None
             return self._enviar(200, cuerpo, tipo, extra)
+        if ruta == "/api/progress":
+            if not self._autorizado():
+                return self._error(HTTPStatus.FORBIDDEN, "token")
+            return self._json({"texto": ESTADO.progreso})
         if ruta == "/api/config":
             if not self._autorizado():
                 return self._error(HTTPStatus.FORBIDDEN, "token")
@@ -278,7 +284,16 @@ class Manejador(BaseHTTPRequestHandler):
 
     def _analizar(self, datos: dict) -> None:
         idioma = datos.get("idioma") if datos.get("idioma") in aimarkers.IDIOMAS else aimarkers.detectar_idioma()
-        imagenes = bool(datos.get("imagenes", True))
+        import aimarkers_seguridad  # noqa: F401 - registra los textos del módulo de seguridad
+        import aimarkers_web
+        opciones = aimarkers_web.Opciones(
+            imagenes=bool(datos.get("imagenes", True)), rastrear=bool(datos.get("rastrear")),
+            max_paginas=_entero(datos.get("max_paginas"), 0, -1, 1_000_000), retardo=0.3,
+            seguridad=bool(datos.get("seguridad")) or bool(datos.get("solo_seguridad")),
+            solo_seguridad=bool(datos.get("solo_seguridad")), activo=bool(datos.get("activo")),
+            autorizado=bool(datos.get("autorizado")), progreso=_avance)
+        if opciones.activo and not opciones.autorizado:
+            return self._error(HTTPStatus.BAD_REQUEST, "authorization")
         objetivos = []
         if isinstance(datos.get("lote"), str) and re.fullmatch(r"[A-Za-z0-9_-]{8,64}", datos["lote"]):
             carpeta = ESTADO.temporal / datos["lote"]
@@ -297,7 +312,11 @@ class Manejador(BaseHTTPRequestHandler):
             return self._error(HTTPStatus.BAD_REQUEST, "target")
         with ESTADO.cerrojo:  # el idioma es global en aimarkers: un análisis cada vez
             aimarkers.fijar_idioma(idioma)
-            resultados = [(aimarkers.analizar_objetivo(o, imagenes_web=imagenes), n) for o, n in objetivos]
+            ESTADO.progreso = ""
+            try:
+                resultados = [(aimarkers.analizar_objetivo(o, opciones=opciones), n) for o, n in objetivos]
+            finally:
+                ESTADO.progreso = ""
             for res, nombre in resultados:
                 if nombre:
                     res.objetivo = nombre
@@ -325,6 +344,18 @@ class Manejador(BaseHTTPRequestHandler):
                 tipo = "application/json; charset=utf-8"
         nombre = {"html": "report.html", "md": "report.md", "json": "report.json"}[formato]
         return self._enviar(200, cuerpo.encode("utf-8"), tipo, {"Content-Disposition": f'attachment; filename="{nombre}"'})
+
+
+def _avance(texto: str) -> None:
+    ESTADO.progreso = str(texto)[:200]
+
+
+def _entero(valor, por_defecto: int, minimo: int, maximo: int) -> int:
+    try:
+        numero = int(valor)
+    except (TypeError, ValueError):
+        return por_defecto
+    return max(minimo, min(maximo, numero))
 
 
 def _decodificar(texto: str) -> str:

@@ -4,6 +4,17 @@
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [semantic versioning](https://semver.org/).
 
+## [1.3.0] - 2026-11-11
+
+### Added
+- Whole-site crawling (`--crawl`, `--max-pages`, `--max-images`, `--delay`): same site only, respects robots.txt, downloads to a temporary folder deleted afterwards.
+- Security module (`--security`, `--security-only`): OWASP Top 10:2025 classification, CWE, MITRE ATT&CK techniques, effect on the CIA triad, 5×5 risk matrix and CVSS v4.0 scores (FIRST's official algorithm, `cvss4.py`) with environmental requirements derived from the site's context.
+  - Passive website checks: transport and TLS, security headers, cookies, mixed content, SRI, vulnerable JavaScript libraries, forms, comments, errors, exposed secrets, source maps, robots.txt and security.txt.
+  - Active mode (`--active --authorized`): well-known sensitive paths, HTTP methods, CORS reflection and old TLS versions.
+  - Code checks: secrets, injection patterns, deserialisation, DOM XSS, TLS verification, weak crypto and randomness, debug mode, silenced exceptions, unpinned dependencies and actions, containers.
+  - `--cvss-threshold` exit code 3 for CI.
+- Interface: Options panel (AI markers, security, website images, crawl, page limit, active mode with authorisation confirmation), live progress, and a security view with CVSS, CIA triad, risk matrix and findings with OWASP/CWE/ATT&CK/CVE links.
+
 ## [1.2.1] - 2026-11-11
 
 ### Changed

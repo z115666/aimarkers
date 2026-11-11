@@ -7,7 +7,7 @@
 [![Licencia: MIT](https://img.shields.io/badge/licencia-MIT-blue.svg)](LICENSE)
 ![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)
 
-Herramienta de línea de comandos para buscar **marcadores de IA** en código fuente, documentación, webs (fichero HTML o URL), **imágenes** (credenciales C2PA, IPTC, EXIF y parámetros de generación) y repositorios Git. Puntúa cada indicio por niveles y genera un informe con las evidencias, en español o en inglés.
+Herramienta de línea de comandos para buscar **marcadores de IA** en código fuente, documentación, webs (fichero HTML o URL), **imágenes** (credenciales C2PA, IPTC, EXIF y parámetros de generación) y repositorios Git. Puntúa cada indicio por niveles y genera un informe con las evidencias, en español o en inglés. También puede rastrear una web completa y hacer una **evaluación de seguridad** (OWASP Top 10:2025, MITRE ATT&CK, CVSS v4.0 y matriz de riesgos CID).
 
 > Los marcadores son indicios, no pruebas. La herramienta ayuda a revisar; la conclusión la pones tú.
 
@@ -127,8 +127,13 @@ El idioma afecta a la consola y a los informes. Los identificadores de los marca
 | `--silencioso` | No imprime el informe en consola |
 | `--sin-color` | Consola sin colores |
 | `--gui` | Abre la interfaz gráfica (ver más abajo) |
+| `--rastrear` | Rastrea todo el sitio en lugar de una sola página |
+| `--max-paginas N` / `--max-imagenes N` / `--retardo S` | Límites del rastreo (`-1` / `0`: sin límite) y pausa entre peticiones |
+| `--seguridad` / `--solo-seguridad` | Añade el análisis de seguridad / hace solo el análisis de seguridad |
+| `--activo --autorizado` | Modo de seguridad activo, solo con autorización (ver más abajo) |
+| `--umbral-cvss N` | Sale con código 3 si algún hallazgo de seguridad llega a CVSS N |
 
-Cada opción tiene también su nombre en inglés: `--evidence`, `--threshold`, `--no-images`, `--quiet`, `--no-color`.
+Cada opción tiene también su nombre en inglés: `--evidence`, `--threshold`, `--no-images`, `--quiet`, `--no-color`, `--crawl`, `--max-pages`, `--max-images`, `--delay`, `--security`, `--security-only`, `--active`, `--authorized`, `--cvss-threshold`.
 
 ## Interfaz gráfica
 
@@ -145,6 +150,42 @@ Se abre en el navegador. Arrastra ficheros, carpetas o imágenes a la ventana, e
 ![Interfaz gráfica de aimarkers](docs/gui-light.png)
 
 Cómo se protege: solo escucha en `127.0.0.1` en un puerto aleatorio; cada petición necesita un token aleatorio de 256 bits que viaja en el fragmento de la URL; comprueba `Host` y `Origin` frente a DNS rebinding y otras webs; usa una política de seguridad de contenido estricta, sin scripts en línea ni recursos externos; los ficheros que sueltas van a una carpeta temporal (50 MB por fichero, 500 MB en total) que se borra al salir. Opciones: `--port N` y `--no-browser`.
+
+## Rastrear una web completa
+
+Por defecto aimarkers analiza solo la página que le das (y hasta 15 de sus imágenes). Con `--rastrear` descarga el sitio entero:
+
+```bash
+aimarkers https://ejemplo.com --rastrear                       # hasta 2.000 páginas, todas las imágenes
+aimarkers https://ejemplo.com --rastrear --max-paginas -1      # sin límite de páginas
+aimarkers https://ejemplo.com --rastrear --max-imagenes 200 --retardo 1
+```
+
+- Solo páginas del mismo sitio (con o sin `www.`) y solo por http(s).
+- Respeta `robots.txt` y `nofollow`, y hace pausas entre peticiones (`--retardo`, 0,3 s por defecto) para no saturar el servidor.
+- Todo se descarga en una carpeta temporal que **se borra al terminar el análisis**, también si falla. Límite total de descarga: 2 GB.
+
+## Análisis de seguridad
+
+`--seguridad` añade una evaluación de seguridad a cada objetivo; `--solo-seguridad` omite los marcadores de IA. Cada hallazgo incluye:
+
+- Categoría de **OWASP Top 10:2025**, **CWE** y técnicas de **MITRE ATT&CK** que facilita.
+- Efecto sobre la **triada CID** (confidencialidad, integridad, disponibilidad).
+- Puntuación **CVSS v4.0** calculada dentro de la herramienta con el algoritmo oficial de FIRST (`cvss4.py`, comprobado contra la calculadora de referencia con 20.000 vectores). Cada hallazgo parte de un vector base tipo; la métrica de amenaza (E) refleja si hay exploits públicos, y los requisitos de entorno (CR, IR, AR) salen del **contexto de la web**: formularios de acceso, datos personales, pagos o subida de ficheros los elevan.
+- Posición en una **matriz de riesgos 5×5** (probabilidad × impacto, al estilo ISO 27005): la probabilidad sale de la explotabilidad CVSS y la madurez del exploit; el impacto, del efecto sobre cada dimensión CID ponderado por el contexto.
+
+**Webs, modo pasivo (por defecto).** Solo mira lo que recibe cualquier visitante: HTTPS y redirección, certificado y versión de TLS, HSTS, CSP, protección frente a marcos, nosniff, Referrer-Policy, Permissions-Policy, versiones expuestas, CORS, atributos de las cookies, contenido mixto, scripts de terceros sin SRI, librerías JavaScript con CVE conocidos (jQuery, jQuery UI, Bootstrap, AngularJS, Lodash, Moment, Handlebars), formularios por HTTP, contraseñas enviadas por GET, formularios sin token anti-CSRF, comentarios HTML sensibles, mensajes de error detallados, listado de directorios, claves y tokens expuestos, mapas de código, `robots.txt` y `security.txt`.
+
+**Webs, modo activo (`--activo --autorizado`).** Además pide rutas sensibles conocidas (`/.git`, `/.env`, copias de seguridad y volcados SQL, copias de `wp-config`, `phpinfo`, `server-status`, enumeración de usuarios y XML-RPC de WordPress, paneles de administración), métodos HTTP peligrosos, reflejo de origen en CORS y si acepta TLS 1.0/1.1. No envía cargas de inyección, contraseñas ni exploits. **Úsalo solo en webs propias o con autorización por escrito**: sondear sin permiso puede ser delito (artículo 197 bis del Código Penal). Sin `--autorizado`, la herramienta no arranca el modo activo.
+
+![Vista de seguridad de la interfaz de aimarkers](docs/gui-security.png)
+
+**Código y ficheros.** Secretos y claves privadas en el código, ficheros `.env`, posibles inyecciones SQL y de comandos, `eval`, deserialización insegura, XSS en el navegador, verificación TLS desactivada, criptografía débil, aleatoriedad no criptográfica para secretos, modo de depuración, excepciones silenciadas, dependencias sin fijar, `curl | sh`, acciones de GitHub sin fijar por SHA y contenedores como root. Son comprobaciones por patrones: señalan líneas que conviene revisar, no vulnerabilidades confirmadas.
+
+```bash
+aimarkers https://mi-web.example --seguridad --rastrear --html informe.html
+aimarkers ~/Proyectos/mi-app --solo-seguridad --umbral-cvss 7    # código de salida 3 si algún hallazgo llega a 7,0
+```
 
 ## Cómo puntúa
 
@@ -217,7 +258,7 @@ Para desarrollar, instala las herramientas de análisis con versiones y hashes f
 ```bash
 python3 -m pip install --require-hashes --no-deps -r requirements-dev.txt
 ruff check .
-bandit -c pyproject.toml -r aimarkers.py
+bandit -c pyproject.toml -r aimarkers.py aimarkers_gui.py aimarkers_web.py aimarkers_seguridad.py cvss4.py
 ```
 
 Validación hecha: la biblioteca estándar de Python (11.630 ficheros) puntúa 3/100; 400 imágenes del sistema no dan ningún falso positivo; una web real con 144 registros cargados en 5 minutos se detecta como ráfaga; el repositorio `psf/requests` puntúa 48/100 por un commit real de marzo de 2026 con `Co-Authored-By: Claude Opus 4.6`.
@@ -246,7 +287,8 @@ aimarkers está diseñado para analizar contenido no confiable. Invoca `git` con
 - No comprueba si el código usa APIs inventadas: eso exige ejecutarlo o revisarlo contra la documentación.
 - No detecta imágenes generadas con IA a partir de los píxeles, solo a partir de sus metadatos. Tampoco lee marcas de agua invisibles como SynthID.
 - La ausencia de marcadores no demuestra autoría humana: los trailers y pies se pueden borrar, los textos se pueden reescribir y los metadatos se pueden eliminar.
+- El análisis de seguridad es automático y no intrusivo: no sustituye a una auditoría ni a una prueba de intrusión, y su CVSS parte de vectores tipo que conviene revisar.
 - Las URLs que necesitan JavaScript para mostrar contenido se analizan solo por su HTML inicial. En ese caso, guarda la página desde el navegador y analiza el fichero.
 
 ---
-Autor: Alberto · [Licencia MIT](LICENSE)
+Autor: Alberto · [Licencia MIT](LICENSE) · `cvss4.py` traduce la calculadora CVSS v4.0 de FIRST (BSD-2-Clause, aviso en el fichero) · Fuentes con licencia SIL Open Font License ([gui/fonts](gui/fonts/README.md))

@@ -24,7 +24,6 @@ const TEXTOS = {
     "cap-imagen": "Credenciales C2PA, origen IPTC, EXIF y parámetros de Stable Diffusion o ComfyUI.",
     "cap-repo-t": "Repositorios y webs",
     "cap-repo": "Coautorías en commits, ramas de agentes, constructores web y cargas masivas de datos.",
-    "imagenes-web": "Analizar también las imágenes de las webs",
     "analizando": "Analizando",
     "subiendo": "Preparando {a} de {b} ficheros",
     "explicita": "El propio contenido declara una herramienta de IA.",
@@ -50,6 +49,39 @@ const TEXTOS = {
     "c2pa-no": "<strong>Firmas C2PA:</strong> sin verificar. Instala c2patool para comprobarlas.",
     "atajo": "Atajo: {k}",
     "varios": "{n} ficheros sueltos",
+    "opciones": "Opciones",
+    "op-que": "Qué analizar",
+    "op-ia": "Marcadores de IA",
+    "op-seguridad": "Seguridad (OWASP, MITRE, CVSS)",
+    "imagenes-web": "Imágenes de las webs",
+    "op-webs": "Webs",
+    "op-rastrear": "Rastrear todo el sitio",
+    "op-max-paginas": "Máximo de páginas",
+    "op-rastrear-ayuda": "Se descarga a una carpeta temporal que se borra al terminar. Respeta robots.txt; −1 sin límite.",
+    "op-activo-t": "Modo activo",
+    "op-activo": "Comprobar rutas sensibles (.git, .env, copias…)",
+    "op-autorizado": "Confirmo que tengo autorización del responsable de esta web para analizarla.",
+    "op-activo-ayuda": "Sin permiso puede ser delito (art. 197 bis del Código Penal). No se envían ataques: solo peticiones a rutas conocidas.",
+    "falta-autorizacion": "Para el modo activo, confirma en Opciones que tienes autorización sobre la web.",
+    "falta-analisis": "Activa en Opciones al menos los marcadores de IA o la seguridad.",
+    "seg-titulo": "Seguridad",
+    "seg-cvss-max": "CVSS v4.0 máximo",
+    "seg-matriz": "Matriz de riesgos",
+    "seg-ejes": "Filas: probabilidad. Columnas: impacto.",
+    "seg-sin": "No se han encontrado fallos con las comprobaciones realizadas.",
+    "seg-aviso": "Evaluación automática y no intrusiva: no sustituye a una auditoría ni a una prueba de intrusión. El CVSS parte de vectores tipo para cada hallazgo y del contexto detectado.",
+    "seg-contexto": "Contexto: {c}. Requisitos de entorno: confidencialidad {cr}, integridad {ir}, disponibilidad {ar}.",
+    "seg-veredicto": "Riesgo de seguridad {n}",
+    "seg-veredicto-nada": "Sin fallos de seguridad detectados",
+    "seg-recomendacion": "Recomendación",
+    "seg-riesgo": "riesgo {n}",
+    "seg-celda": "Probabilidad {p}, impacto {i}: {n} hallazgos",
+    "seg-informativo": "informativo",
+    "seg-cid": "Afecta a: {d}",
+    "req-H": "alta", "req-M": "media", "req-L": "baja",
+    "dim-C": "Confidencialidad", "dim-I": "Integridad", "dim-D": "Disponibilidad",
+    "riesgo-critico": "Crítico", "riesgo-alto": "Alto", "riesgo-medio": "Medio", "riesgo-bajo": "Bajo", "riesgo-ninguno": "Ninguno",
+    "sev-critical": "Crítica", "sev-high": "Alta", "sev-medium": "Media", "sev-low": "Baja", "sev-none": "Ninguna",
   },
   en: {
     "saltar": "Skip to content",
@@ -73,7 +105,6 @@ const TEXTOS = {
     "cap-imagen": "C2PA Content Credentials, IPTC source, EXIF and Stable Diffusion or ComfyUI parameters.",
     "cap-repo-t": "Repositories and websites",
     "cap-repo": "Commit co-authors, agent branches, website builders and bulk data loads.",
-    "imagenes-web": "Also analyse images on websites",
     "analizando": "Analysing",
     "subiendo": "Preparing {a} of {b} files",
     "explicita": "The content itself declares an AI tool.",
@@ -99,6 +130,39 @@ const TEXTOS = {
     "c2pa-no": "<strong>C2PA signatures:</strong> not verified. Install c2patool to check them.",
     "atajo": "Shortcut: {k}",
     "varios": "{n} separate files",
+    "opciones": "Options",
+    "op-que": "What to analyse",
+    "op-ia": "AI markers",
+    "op-seguridad": "Security (OWASP, MITRE, CVSS)",
+    "imagenes-web": "Website images",
+    "op-webs": "Websites",
+    "op-rastrear": "Crawl the whole site",
+    "op-max-paginas": "Maximum pages",
+    "op-rastrear-ayuda": "Downloaded to a temporary folder that is deleted afterwards. Respects robots.txt; −1 for no limit.",
+    "op-activo-t": "Active mode",
+    "op-activo": "Check sensitive paths (.git, .env, backups…)",
+    "op-autorizado": "I confirm I have permission from the owner of this website to test it.",
+    "op-activo-ayuda": "Without permission this may be a crime. No attacks are sent: only requests to well-known paths.",
+    "falta-autorizacion": "For active mode, confirm in Options that you are authorised to test the website.",
+    "falta-analisis": "Turn on AI markers or security in Options.",
+    "seg-titulo": "Security",
+    "seg-cvss-max": "Highest CVSS v4.0",
+    "seg-matriz": "Risk matrix",
+    "seg-ejes": "Rows: likelihood. Columns: impact.",
+    "seg-sin": "No issues found with the checks performed.",
+    "seg-aviso": "Automated, non-intrusive assessment: it does not replace an audit or a penetration test. CVSS starts from typical vectors for each finding and the detected context.",
+    "seg-contexto": "Context: {c}. Environmental requirements: confidentiality {cr}, integrity {ir}, availability {ar}.",
+    "seg-veredicto": "{n} security risk",
+    "seg-veredicto-nada": "No security issues detected",
+    "seg-recomendacion": "Recommendation",
+    "seg-riesgo": "risk {n}",
+    "seg-celda": "Likelihood {p}, impact {i}: {n} findings",
+    "seg-informativo": "informational",
+    "seg-cid": "Affects: {d}",
+    "req-H": "high", "req-M": "medium", "req-L": "low",
+    "dim-C": "Confidentiality", "dim-I": "Integrity", "dim-D": "Availability",
+    "riesgo-critico": "Critical", "riesgo-alto": "High", "riesgo-medio": "Medium", "riesgo-bajo": "Low", "riesgo-ninguno": "None",
+    "sev-critical": "Critical", "sev-high": "High", "sev-medium": "Medium", "sev-low": "Low", "sev-none": "None",
   },
 };
 
@@ -260,8 +324,18 @@ function pintarResultado(caso) {
   estado.actual = caso;
   $("r-objetivo").textContent = r.objetivo;
   const veredicto = $("r-veredicto");
-  veredicto.textContent = r.valoracion;
-  veredicto.dataset.banda = r.banda;
+  const soloSeg = Boolean(r.solo_seguridad && r.seguridad);
+  $("vista-resultado").classList.toggle("solo-seguridad", soloSeg);
+  for (const id of ["r-espectro", "r-grupos"]) $(id).hidden = soloSeg;
+  if (soloSeg) {
+    const peor = peorRiesgo(r.seguridad);
+    const frase = peor ? t("seg-veredicto", { n: t("riesgo-" + peor).toLowerCase() }) : t("seg-veredicto-nada");
+    veredicto.textContent = frase.charAt(0).toUpperCase() + frase.slice(1);
+    veredicto.dataset.banda = { critico: "alta", alto: "alta", medio: "media" }[peor] || "nula";
+  } else {
+    veredicto.textContent = r.valoracion;
+    veredicto.dataset.banda = r.banda;
+  }
   const meta = $("r-meta");
   meta.replaceChildren(el("span", null, r.tipo_nombre),
     el("span", null, t(r.ficheros_analizados === 1 ? "ficheros-1" : "ficheros-n", { n: r.ficheros_analizados })));
@@ -273,7 +347,7 @@ function pintarResultado(caso) {
   marca.style.left = "0%";
   requestAnimationFrame(() => requestAnimationFrame(() => { marca.style.left = r.puntuacion + "%"; }));
 
-  $("r-explicita").hidden = !r.atribucion_explicita;
+  $("r-explicita").hidden = soloSeg || !r.atribucion_explicita;
 
   const grupos = $("r-grupos");
   grupos.replaceChildren();
@@ -304,7 +378,8 @@ function pintarResultado(caso) {
     seccion.append(titulo, lista);
     grupos.append(seccion);
   }
-  $("r-vacio").hidden = r.grupos.length > 0;
+  $("r-vacio").hidden = soloSeg || r.grupos.length > 0;
+  pintarSeguridad(r.seguridad);
 
   const notas = $("r-notas");
   notas.replaceChildren(...r.notas.map((n) => el("li", null, n)));
@@ -319,6 +394,125 @@ function pintarResultado(caso) {
   window.scrollTo({ top: 0, behavior: reducirMovimiento.matches ? "auto" : "smooth" });
 }
 
+const ORDEN_RIESGO = ["critico", "alto", "medio", "bajo"];
+function peorRiesgo(seg) {
+  return ORDEN_RIESGO.find((n) => seg.hallazgos.some((h) => h.nivel_riesgo === n && !h.informativo)) || "";
+}
+
+function enlace(texto, url, titulo) {
+  const a = el("a", null, texto);
+  a.href = url;
+  a.target = "_blank";
+  a.rel = "noopener noreferrer";
+  if (titulo) a.title = titulo;
+  return a;
+}
+
+function numero(valor) {
+  return Number(valor).toLocaleString(estado.idioma, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+}
+
+function pintarSeguridad(seg) {
+  const panel = $("r-seguridad");
+  panel.hidden = !seg;
+  if (!seg) return;
+  const req = seg.requisitos;
+  $("seg-contexto").textContent = t("seg-contexto", { c: seg.contexto, cr: t("req-" + req.CR), ir: t("req-" + req.IR), ar: t("req-" + req.AR) });
+  const cvss = $("seg-cvss");
+  cvss.textContent = numero(seg.cvss_max);
+  cvss.parentElement.dataset.sev = seg.severidad_max;
+  $("seg-severidad").textContent = t("sev-" + seg.severidad_max);
+
+  const triada = $("seg-triada");
+  triada.replaceChildren();
+  for (const dim of ["C", "I", "D"]) {
+    const d = seg.triada[dim];
+    const fila = el("div", "triada-fila");
+    fila.setAttribute("role", "listitem");
+    fila.dataset.riesgo = d.nivel;
+    const barra = el("span", "triada-barra");
+    const relleno = el("i");
+    relleno.style.setProperty("--w", Math.round((d.riesgo_max / 25) * 100) + "%");
+    barra.append(relleno);
+    fila.append(el("span", null, t("dim-" + dim)), el("strong", null, t("riesgo-" + d.nivel)), barra);
+    triada.append(fila);
+  }
+
+  const matriz = $("seg-matriz");
+  matriz.replaceChildren();
+  for (let p = 5; p >= 1; p--) {
+    const fila = el("div");
+    fila.setAttribute("role", "row");
+    fila.style.display = "contents";
+    fila.append(el("span", "eje", String(p)));
+    for (let i = 1; i <= 5; i++) {
+      const n = seg.matriz[p - 1][i - 1];
+      const celda = el("span", "matriz-celda" + (n ? "" : " vacia"), n ? String(n) : "0");
+      celda.setAttribute("role", "cell");
+      celda.dataset.riesgo = p * i >= 17 ? "critico" : p * i >= 10 ? "alto" : p * i >= 5 ? "medio" : "bajo";
+      celda.title = t("seg-celda", { p, i, n });
+      celda.setAttribute("aria-label", celda.title);
+      fila.append(celda);
+    }
+    matriz.append(fila);
+  }
+  const pie = el("div");
+  pie.style.display = "contents";
+  pie.append(el("span", "eje", ""));
+  for (let i = 1; i <= 5; i++) pie.append(el("span", "eje", String(i)));
+  matriz.append(pie);
+
+  const grupos = $("seg-grupos");
+  grupos.replaceChildren();
+  for (const nivel of ORDEN_RIESGO) {
+    const lista = seg.hallazgos.filter((h) => h.nivel_riesgo === nivel);
+    if (!lista.length) continue;
+    const seccion = el("section", "grupo");
+    seccion.dataset.nivel = nivel;
+    const titulo = el("h2");
+    titulo.append(el("span", "punto"), el("span", null, t("riesgo-" + nivel)), el("small", null, String(lista.length)));
+    const ul = el("ul");
+    for (const h of lista) {
+      const item = el("li");
+      const detalle = el("details", "marcador");
+      const resumen = el("summary");
+      const chip = el("span", "seg-cvss-chip");
+      chip.dataset.sev = h.severidad;
+      if (h.cvss === null) chip.textContent = t("seg-informativo");
+      else chip.append("CVSS ", el("b", null, numero(h.cvss)));
+      resumen.append(el("span", "marcador-desc", h.titulo), el("span", "marcador-veces", `P${h.probabilidad}×I${h.impacto}`), chip);
+      const cuerpo = el("div", "seg-detalle");
+      cuerpo.append(el("p", null, h.descripcion));
+      const refs = el("p", "seg-refs");
+      refs.append(enlace(`OWASP ${h.owasp}`, "https://owasp.org/Top10/2025/", h.owasp_nombre));
+      for (const c of h.cwe) refs.append(enlace(c, `https://cwe.mitre.org/data/definitions/${c.slice(4)}.html`));
+      for (const m of h.mitre) refs.append(enlace(m.id, `https://attack.mitre.org/techniques/${m.id.replace(".", "/")}/`, m.nombre));
+      for (const c of h.cve) refs.append(enlace(c, `https://www.cve.org/CVERecord?id=${c}`));
+      cuerpo.append(refs);
+      const afectadas = ["C", "I", "D"].filter((d) => h.cid[d] !== "N").map((d) => `${t("dim-" + d)} (${h.cid[d]})`);
+      if (afectadas.length) cuerpo.append(el("p", null, t("seg-cid", { d: afectadas.join(", ") })));
+      if (h.vector) cuerpo.append(el("p", "seg-vector", h.vector));
+      const evid = el("ul", "evidencias");
+      for (const e of h.evidencias.slice(0, 8)) {
+        const fila = el("li", "evidencia");
+        fila.append(el("code", null, e.ubicacion), el("span", null, e.extracto));
+        evid.append(fila);
+      }
+      cuerpo.append(evid);
+      const rec = el("p", "seg-recomendacion");
+      rec.append(el("strong", null, t("seg-recomendacion") + ": "), h.recomendacion);
+      cuerpo.append(rec);
+      detalle.append(resumen, cuerpo);
+      if (nivel === "critico") detalle.open = true;
+      item.append(detalle);
+      ul.append(item);
+    }
+    seccion.append(titulo, ul);
+    grupos.append(seccion);
+  }
+  $("seg-vacio").hidden = seg.hallazgos.length > 0;
+}
+
 function pintarCasos() {
   const lista = $("lista-casos");
   lista.replaceChildren();
@@ -328,8 +522,10 @@ function pintarCasos() {
     boton.type = "button";
     boton.title = r.objetivo;
     if (caso === estado.actual) boton.setAttribute("aria-current", "true");
-    const puntos = el("span", "caso-puntos", String(r.puntuacion));
-    puntos.style.color = r.banda === "indeterminada" ? "var(--tinta-3)" : `var(--banda-${r.banda})`;
+    const puntos = el("span", "caso-puntos", r.solo_seguridad && r.seguridad ? numero(r.seguridad.cvss_max) : String(r.puntuacion));
+    const colorSev = { critical: "--explicito", high: "--fuerte", medium: "--medio", low: "--debil" }[r.seguridad?.severidad_max] || "--tinta-3";
+    puntos.style.color = r.solo_seguridad && r.seguridad ? `var(${colorSev})`
+      : r.banda === "indeterminada" ? "var(--tinta-3)" : `var(--banda-${r.banda})`;
     if (r.banda === "indeterminada") puntos.textContent = "?";
     boton.append(el("span", "caso-nombre", r.objetivo.split(/[\\/]/).filter(Boolean).pop() || r.objetivo), puntos);
     boton.addEventListener("click", () => pintarResultado(caso));
@@ -341,11 +537,61 @@ function pintarCasos() {
 }
 
 // ---------- Análisis ----------
+function opcionesActuales() {
+  const maximo = parseInt($("op-max-paginas").value, 10);
+  const ia = $("op-ia").checked;
+  const seguridad = $("op-seguridad").checked || $("op-activo").checked;
+  return {
+    imagenes: $("imagenes-web").checked, rastrear: $("op-rastrear").checked,
+    max_paginas: Number.isFinite(maximo) ? maximo : 0,
+    seguridad, solo_seguridad: seguridad && !ia,
+    activo: $("op-activo").checked, autorizado: $("op-activo").checked && $("op-autorizado").checked,
+  };
+}
+
+function opcionesValidas() {
+  const op = opcionesActuales();
+  if (!$("op-ia").checked && !op.seguridad) { avisar(t("falta-analisis"), true); $("opciones").open = true; return false; }
+  if (op.activo && !op.autorizado) { avisar(t("falta-autorizacion"), true); $("opciones").open = true; $("op-autorizado").focus(); return false; }
+  return true;
+}
+
+const OPCIONES_GUARDADAS = ["op-ia", "op-seguridad", "imagenes-web", "op-rastrear"];
+function cargarOpciones() {
+  for (const id of OPCIONES_GUARDADAS) {
+    const valor = leer("op." + id);
+    if (valor === "1" || valor === "0") $(id).checked = valor === "1";
+  }
+  const maximo = leer("op.max-paginas");
+  if (maximo && /^-?\d{1,7}$/.test(maximo)) $("op-max-paginas").value = maximo;
+  actualizarOpciones();
+}
+
+function actualizarOpciones() {
+  $("op-autorizado-fila").hidden = !$("op-activo").checked;
+  if (!$("op-activo").checked) $("op-autorizado").checked = false;
+  const activas = ["op-seguridad", "op-rastrear", "op-activo"].filter((id) => $(id).checked).length + ($("op-ia").checked ? 0 : 1);
+  $("opciones-cuenta").textContent = activas ? String(activas) : "";
+}
+
+let temporizadorProgreso = 0;
+function seguirProgreso(activo) {
+  clearInterval(temporizadorProgreso);
+  if (!activo) return;
+  temporizadorProgreso = setInterval(async () => {
+    try {
+      const { texto } = await api("/api/progress");
+      if (texto && estado.ocupado) $("progreso").textContent = texto;
+    } catch (_) { /* el análisis sigue; se reintenta */ }
+  }, 900);
+}
+
 async function analizar(peticion, casoExistente = null) {
-  if (estado.ocupado) return;
+  if (estado.ocupado || !opcionesValidas()) return;
   ocupado(true);
+  seguirProgreso(true);
   try {
-    const datos = await api("/api/analyze", { ...peticion, idioma: estado.idioma, imagenes: $("imagenes-web").checked });
+    const datos = await api("/api/analyze", { ...peticion, ...opcionesActuales(), idioma: estado.idioma });
     // Repetir el mismo objetivo actualiza su caso en lugar de duplicarlo
     const clave = peticion.objetivo ? "o:" + peticion.objetivo.replace(/\/+$/, "").toLowerCase() : "l:" + peticion.lote;
     const repetido = casoExistente || estado.casos.find((c) => c.clave === clave);
@@ -355,9 +601,11 @@ async function analizar(peticion, casoExistente = null) {
     caso.idioma = estado.idioma;
     if (repetido) estado.casos.splice(estado.casos.indexOf(repetido), 1);
     estado.casos.push(caso);
+    seguirProgreso(false);
     ocupado(false);
     pintarResultado(caso);
   } catch (e) {
+    seguirProgreso(false);
     ocupado(false);
     mostrar(estado.actual ? "resultado" : "inicio");
     avisar(mensajeError(e), true);
@@ -371,7 +619,7 @@ function nuevoLote() {
 }
 
 async function subirYAnalizar(ficheros, nombre) {
-  if (!ficheros.length || estado.ocupado) return;
+  if (!ficheros.length || estado.ocupado || !opcionesValidas()) return;
   const lote = nuevoLote();
   ocupado(true, t("subiendo", { a: 0, b: ficheros.length }));
   estado.ocupado = true;
@@ -480,6 +728,20 @@ function conectar() {
     if (estado.actual && !$("vista-resultado").hidden) analizar(estado.actual.peticion, estado.actual);
   }));
 
+  for (const id of [...OPCIONES_GUARDADAS, "op-activo", "op-autorizado"]) {
+    $(id).addEventListener("change", () => {
+      if (OPCIONES_GUARDADAS.includes(id)) guardar("op." + id, $(id).checked ? "1" : "0");
+      actualizarOpciones();
+    });
+  }
+  $("op-max-paginas").addEventListener("change", () => guardar("op.max-paginas", $("op-max-paginas").value));
+  document.addEventListener("click", (ev) => {
+    if ($("opciones").open && !$("opciones").contains(ev.target)) $("opciones").open = false;
+  });
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape" && $("opciones").open) { $("opciones").open = false; $("opciones").querySelector("summary").focus(); }
+  });
+
   $("tema").addEventListener("click", () => {
     estado.tema = { auto: "dark", dark: "light", light: "auto" }[estado.tema];
     guardar("tema", estado.tema);
@@ -523,6 +785,7 @@ async function iniciar() {
   estado.idioma = ["es", "en"].includes(idiomaGuardado) ? idiomaGuardado
     : ((navigator.language || "").toLowerCase().startsWith("es") ? "es" : "en");
   conectar();
+  cargarOpciones();
   aplicarIdioma();
   revelar($("titular-inicio"));
   try {

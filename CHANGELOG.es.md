@@ -4,6 +4,17 @@
 
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [1.3.0] - 2026-11-11
+
+### Añadido
+- Rastreo de webs completas (`--rastrear`, `--max-paginas`, `--max-imagenes`, `--retardo`): solo el mismo sitio, respeta robots.txt y descarga a una carpeta temporal que se borra al terminar.
+- Módulo de seguridad (`--seguridad`, `--solo-seguridad`): clasificación OWASP Top 10:2025, CWE, técnicas de MITRE ATT&CK, efecto sobre la triada CID, matriz de riesgos 5×5 y CVSS v4.0 (algoritmo oficial de FIRST, `cvss4.py`) con requisitos de entorno según el contexto de la web.
+  - Comprobaciones pasivas de webs: transporte y TLS, cabeceras de seguridad, cookies, contenido mixto, SRI, librerías JavaScript vulnerables, formularios, comentarios, errores, secretos expuestos, mapas de código, robots.txt y security.txt.
+  - Modo activo (`--activo --autorizado`): rutas sensibles conocidas, métodos HTTP, reflejo de CORS y versiones antiguas de TLS.
+  - Comprobaciones de código: secretos, patrones de inyección, deserialización, XSS en el navegador, verificación TLS, criptografía y aleatoriedad débiles, depuración, excepciones silenciadas, dependencias y acciones sin fijar, contenedores.
+  - `--umbral-cvss` con código de salida 3 para CI.
+- Interfaz: panel de Opciones (marcadores de IA, seguridad, imágenes de las webs, rastreo, límite de páginas, modo activo con confirmación de autorización), progreso en directo y vista de seguridad con CVSS, triada CID, matriz de riesgos y hallazgos con enlaces a OWASP, CWE, ATT&CK y CVE.
+
 ## [1.2.1] - 2026-11-11
 
 ### Cambiado

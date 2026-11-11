@@ -1,6 +1,6 @@
 # AI markers report
 
-Generated with aimarkers 1.1.0 on 2026-11-10 20:27.
+Generated with aimarkers 1.3.0 on 2026-11-11 09:33.
 
 > Markers are signs, not proof. Review every piece of evidence before drawing conclusions; the absence of markers does not prove human authorship either.
 

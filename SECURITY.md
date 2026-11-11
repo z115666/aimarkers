@@ -6,6 +6,7 @@
 
 | Version | Supported |
 | --- | --- |
+| 1.3.x | Yes |
 | 1.2.x | Yes |
 | 1.1.x | Yes |
 | 1.0.x | No: upgrade to 1.1 |
@@ -31,6 +32,9 @@ aimarkers is meant to analyse **untrusted** content: third-party repositories, w
 | Downloading URLs and images | `http`/`https` only, including after redirects; timeouts; at most 15 images of 15 MB, in a temporary folder deleted afterwards |
 | `c2patool` | Located on the PATH with `shutil.which`, run by absolute path, without a shell, with list arguments and a 60 s timeout. It is optional |
 | Graphical interface (`--gui`) attacked from another website or tab | Listens on 127.0.0.1 only; 256-bit token in the URL fragment, required in a header; `Host` and `Origin` checks against DNS rebinding and CSRF; strict CSP without inline scripts; static files from a closed list; uploads limited and sanitised into a temporary folder deleted on exit |
+| Crawling a whole website | Same site and http(s) only, `robots.txt` and `nofollow` respected, pause between requests, size limits per file and 2 GB in total; everything in a temporary folder deleted at the end, even after errors |
+| Misuse of the active security mode against third parties | Off by default; requires `--active` and an explicit `--authorized` declaration (a confirmation box in the interface). It only requests well-known paths: no injection payloads, credentials or exploits |
+| Leaking secrets found during the analysis | Keys and tokens are shown truncated in reports |
 | Report injection | The HTML report escapes all analysed content and contains no scripts; Markdown escapes HTML and pipes |
 | Supply chain | No runtime dependencies (standard library only). GitHub Actions pinned by commit hash and development tools installed with `--require-hashes`. The Homebrew formula points to a specific commit with its SHA-256 |
 

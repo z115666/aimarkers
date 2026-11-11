@@ -7,7 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)
 
-Command-line tool that looks for **AI markers** in source code, documentation, websites (HTML file or URL), **images** (C2PA Content Credentials, IPTC, EXIF and generation parameters) and Git repositories. It scores each sign by level and produces a report with the evidence, in English or Spanish.
+Command-line tool that looks for **AI markers** in source code, documentation, websites (HTML file or URL), **images** (C2PA Content Credentials, IPTC, EXIF and generation parameters) and Git repositories. It scores each sign by level and produces a report with the evidence, in English or Spanish. It can also crawl a whole website and run a **security assessment** (OWASP Top 10:2025, MITRE ATT&CK, CVSS v4.0 and a CIA risk matrix).
 
 > Markers are signs, not proof. The tool helps you review; the conclusion is yours.
 
@@ -127,8 +127,13 @@ The language applies to the console and the reports. Marker identifiers (`coauto
 | `--quiet` | Do not print the report to the console |
 | `--no-color` | Plain console output |
 | `--gui` | Open the graphical interface (see below) |
+| `--crawl` | Crawl the whole site instead of a single page |
+| `--max-pages N` / `--max-images N` / `--delay S` | Crawl limits (`-1` / `0`: no limit) and pause between requests |
+| `--security` / `--security-only` | Add the security analysis / run only the security analysis |
+| `--active --authorized` | Active security mode, only with authorisation (see below) |
+| `--cvss-threshold N` | Exit with code 3 if any security finding reaches CVSS N |
 
-Every option also has a Spanish name: `--evidencias`, `--umbral`, `--sin-imagenes`, `--silencioso`, `--sin-color`.
+Every option also has a Spanish name: `--evidencias`, `--umbral`, `--sin-imagenes`, `--silencioso`, `--sin-color`, `--rastrear`, `--max-paginas`, `--max-imagenes`, `--retardo`, `--seguridad`, `--solo-seguridad`, `--activo`, `--autorizado`, `--umbral-cvss`.
 
 ## Graphical interface
 
@@ -145,6 +150,42 @@ It opens in your browser. Drop files, folders or images onto the window, type a 
 ![aimarkers graphical interface](docs/gui-dark.png)
 
 How it is protected: it only listens on `127.0.0.1` on a random port; every request needs a random 256-bit token that travels in the URL fragment; it checks `Host` and `Origin` against DNS rebinding and other websites; it uses a strict Content Security Policy with no inline scripts or external resources; dropped files go to a temporary folder (50 MB per file, 500 MB in total) that is deleted on exit. Options: `--port N` and `--no-browser`.
+
+## Crawling a whole website
+
+By default aimarkers analyses only the page you give it (and up to 15 of its images). With `--crawl` it downloads the whole site:
+
+```bash
+aimarkers https://example.com --crawl                    # up to 2,000 pages, every image
+aimarkers https://example.com --crawl --max-pages -1     # no page limit
+aimarkers https://example.com --crawl --max-images 200 --delay 1
+```
+
+- Only pages on the same site (with or without `www.`), only over http(s).
+- It respects `robots.txt` and `nofollow`, and pauses between requests (`--delay`, 0.3 s by default) so as not to overload the server.
+- Everything is downloaded to a temporary folder that is **deleted when the analysis ends**, even if it fails. Total download limit: 2 GB.
+
+## Security analysis
+
+`--security` adds a security assessment to each target; `--security-only` skips the AI markers. Every finding includes:
+
+- **OWASP Top 10:2025** category, **CWE** and **MITRE ATT&CK** techniques it enables.
+- Effect on the **CIA triad** (confidentiality, integrity, availability).
+- **CVSS v4.0** score computed inside the tool with FIRST's official algorithm (`cvss4.py`, checked against the reference calculator on 20,000 vectors). Each finding has a typical base vector; the threat metric (E) reflects whether there are public exploits, and the environmental requirements (CR, IR, AR) come from the **site's context**: login forms, personal data, payments or uploads raise them.
+- Position in a **5×5 risk matrix** (likelihood × impact, as in ISO 27005): likelihood from CVSS exploitability and exploit maturity, impact from the effect on each CIA dimension weighted by the context.
+
+**Websites, passive mode (default).** Only looks at what any visitor receives: HTTPS and redirection, certificate and TLS version, HSTS, CSP, anti-framing, nosniff, Referrer-Policy, Permissions-Policy, version disclosure, CORS, cookie attributes, mixed content, third-party scripts without SRI, JavaScript libraries with known CVEs (jQuery, jQuery UI, Bootstrap, AngularJS, Lodash, Moment, Handlebars), forms over HTTP, passwords sent by GET, forms without anti-CSRF tokens, sensitive HTML comments, detailed error messages, directory listing, exposed keys and tokens, source maps, `robots.txt` and `security.txt`.
+
+**Websites, active mode (`--active --authorized`).** Also requests well-known sensitive paths (`/.git`, `/.env`, backups and SQL dumps, `wp-config` copies, `phpinfo`, `server-status`, WordPress user enumeration and XML-RPC, admin panels), dangerous HTTP methods, CORS origin reflection and acceptance of TLS 1.0/1.1. It sends no injection payloads, no passwords and no exploits. **Only use it on websites you own or are authorised in writing to test**: unauthorised testing may be a crime (in Spain, article 197 bis of the Criminal Code). Without `--authorized` the tool refuses to start active mode.
+
+![Security view of the aimarkers interface](docs/gui-security.png)
+
+**Code and files.** Hard-coded secrets and private keys, `.env` files, possible SQL and command injection, `eval`, insecure deserialisation, DOM XSS, disabled TLS verification, weak cryptography, non-cryptographic randomness for secrets, debug mode, silenced exceptions, unpinned dependencies, `curl | sh`, GitHub Actions not pinned to a SHA and containers running as root. These are pattern-based checks: they point to lines worth reviewing, not confirmed vulnerabilities.
+
+```bash
+aimarkers https://my-site.example --security --crawl --html report.html
+aimarkers ~/Projects/my-app --security-only --cvss-threshold 7     # exit code 3 if any finding reaches 7.0
+```
 
 ## Scoring
 
@@ -217,7 +258,7 @@ For development, install the analysis tools with pinned versions and hashes:
 ```bash
 python3 -m pip install --require-hashes --no-deps -r requirements-dev.txt
 ruff check .
-bandit -c pyproject.toml -r aimarkers.py
+bandit -c pyproject.toml -r aimarkers.py aimarkers_gui.py aimarkers_web.py aimarkers_seguridad.py cvss4.py
 ```
 
 Validation done: the Python standard library (11,630 files) scores 3/100; 400 system images give no false positives; a real website with 144 records loaded in 5 minutes is detected as a burst; the `psf/requests` repository scores 48/100 because of a real March 2026 commit with `Co-Authored-By: Claude Opus 4.6`.
@@ -246,7 +287,8 @@ aimarkers is designed to analyse untrusted content. It runs `git` with a hardene
 - It does not check whether code calls invented APIs: that requires running it or checking it against the documentation.
 - It does not detect AI images from their pixels, only from their metadata. Nor does it read invisible watermarks such as SynthID.
 - The absence of markers does not prove human authorship: trailers and footers can be removed, text can be rewritten and metadata can be stripped.
+- The security analysis is automated and non-intrusive: it does not replace an audit or a penetration test, and its CVSS scores start from typical vectors that you should review.
 - URLs that need JavaScript to render content are analysed only by their initial HTML. In that case, save the page from the browser and analyse the file.
 
 ---
-Author: Alberto · [MIT License](LICENSE)
+Author: Alberto · [MIT License](LICENSE) · `cvss4.py` is a translation of FIRST's CVSS v4.0 calculator (BSD-2-Clause, notice in the file) · Fonts under the SIL Open Font License ([gui/fonts](gui/fonts/README.md))

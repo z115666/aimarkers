@@ -8,6 +8,7 @@
     "ficheros_analizados": 1,
     "idioma": "en",
     "notas": [],
+    "seguridad": null,
     "hallazgos": [
       {
         "regla": "framework-ia",
@@ -64,6 +65,7 @@
     "ficheros_analizados": 3,
     "idioma": "en",
     "notas": [],
+    "seguridad": null,
     "hallazgos": [
       {
         "regla": "carpeta-agente",
@@ -264,6 +266,7 @@
     "ficheros_analizados": 1,
     "idioma": "en",
     "notas": [],
+    "seguridad": null,
     "hallazgos": [
       {
         "regla": "utm-chatgpt",
@@ -364,6 +367,7 @@
     "notas": [
       "landing.html: meta generator = «v0.app»"
     ],
+    "seguridad": null,
     "hallazgos": [
       {
         "regla": "gen-lovable",
@@ -458,6 +462,7 @@
     "notas": [
       "c2patool is not installed: C2PA signatures were not verified (brew install c2patool)."
     ],
+    "seguridad": null,
     "hallazgos": [
       {
         "regla": "c2pa-ia",
@@ -486,6 +491,7 @@
     "ficheros_analizados": 1,
     "idioma": "en",
     "notas": [],
+    "seguridad": null,
     "hallazgos": [
       {
         "regla": "parametros-generacion",
@@ -517,6 +523,7 @@
       "c2patool is not installed: C2PA signatures were not verified (brew install c2patool).",
       "c2pa_camara.jpg: C2PA credentials without an AI declaration (source: digital capture (camera); tool: Prueba Cámara 2.3; signer: C2PA Test Signing Cert (C2PA Signer); signature: not verified (install c2patool))."
     ],
+    "seguridad": null,
     "hallazgos": [],
     "resumen_por_marcador": {}
   }

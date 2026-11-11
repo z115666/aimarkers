@@ -35,6 +35,7 @@ import struct
 import subprocess  # nosec B404
 import sys
 import tempfile
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -45,7 +46,7 @@ from datetime import datetime, timezone
 from html.parser import HTMLParser
 from pathlib import Path
 
-VERSION = "1.2.1"
+VERSION = "1.3.0"
 
 # ---------------------------------------------------------------------------
 # Idioma / Language
@@ -163,6 +164,14 @@ TEXTOS: dict[str, tuple[str, str]] = {
                            "miniaturas de buscadores y redes sociales. Busca el original con una búsqueda inversa de imágenes.",
                            "{u}: the image ({f}) has no metadata left (no C2PA, XMP or EXIF). This happens with screenshots, "
                            "search engine thumbnails and social networks. Look for the original with a reverse image search."),
+    "nota.limite_paginas": ("Rastreo detenido al llegar a {n} páginas (usa --max-paginas para cambiar el límite; -1 sin límite).",
+                            "Crawl stopped at {n} pages (use --max-pages to change the limit; -1 for no limit)."),
+    "nota.paginas_rastreadas": ("{n} páginas descargadas del sitio (borradas al terminar).",
+                                "{n} pages downloaded from the site (deleted afterwards)."),
+    "nota.robots": ("Se ha respetado robots.txt.", "robots.txt was respected."),
+    "prog.paginas": ("Rastreando: {n} páginas", "Crawling: {n} pages"),
+    "prog.scripts": ("Descargando JavaScript del sitio: {n}", "Downloading site JavaScript: {n}"),
+    "prog.imagenes": ("Analizando imágenes: {n} de {t}", "Analysing images: {n} of {t}"),
     "nota.imagen_grande": ("{u}: imagen demasiado grande; no se ha analizado.", "{u}: image too large; not analysed."),
     # Evidencias generadas
     "ev.muletillas": ("{n} apariciones ({d}/1000 palabras): {l}", "{n} occurrences ({d}/1000 words): {l}"),
@@ -215,6 +224,23 @@ TEXTOS: dict[str, tuple[str, str]] = {
     "cli.lang": ("Idioma de la salida: es o en (por defecto, el del sistema)",
                  "Output language: es or en (default: system language)"),
     "cli.fichero": ("FICHERO", "FILE"),
+    "cli.rastrear": ("Rastrear todo el sitio (mismo dominio) en lugar de solo la página indicada",
+                     "Crawl the whole site (same domain) instead of just the given page"),
+    "cli.max_paginas": ("Máximo de páginas al rastrear (por defecto 2000; -1 sin límite)",
+                        "Maximum pages when crawling (default 2000; -1 for no limit)"),
+    "cli.max_imagenes": ("Máximo de imágenes de webs a analizar (por defecto 15, o todas al rastrear; 0 sin límite)",
+                         "Maximum website images to analyse (default 15, or all when crawling; 0 for no limit)"),
+    "cli.retardo": ("Pausa en segundos entre peticiones al rastrear (por defecto 0.3)",
+                    "Pause in seconds between requests when crawling (default 0.3)"),
+    "cli.seguridad": ("Añadir el análisis de seguridad (OWASP Top 10, MITRE ATT&CK, CVSS v4.0, matriz de riesgos CID)",
+                      "Add the security analysis (OWASP Top 10, MITRE ATT&CK, CVSS v4.0, CIA risk matrix)"),
+    "cli.activo": ("Seguridad en modo activo: comprueba rutas sensibles conocidas (exige --autorizado)",
+                   "Active security mode: checks known sensitive paths (requires --authorized)"),
+    "cli.autorizado": ("Declaras que tienes autorización para analizar la web en modo activo",
+                       "You declare you are authorised to test the website in active mode"),
+    "cli.solo_seguridad": ("Solo el análisis de seguridad, sin marcadores de IA", "Security analysis only, without AI markers"),
+    "cli.umbral_cvss": ("Salir con código 3 si algún hallazgo de seguridad alcanza este CVSS",
+                        "Exit with code 3 if any security finding reaches this CVSS score"),
     "cli.gui": ("Abrir la interfaz gráfica en el navegador (solo en este equipo)",
                 "Open the graphical interface in the browser (this computer only)"),
     "cli.port": ("Puerto local de la interfaz gráfica (por defecto, uno libre al azar)",
@@ -387,6 +413,8 @@ class Resultado:
     notas: list[str] = field(default_factory=list)
     ficheros_analizados: int = 0
     imagenes_sin_metadatos: int = 0
+    seguridad: object = None  # InformeSeguridad del módulo aimarkers_seguridad
+    solo_seguridad: bool = False
 
     def anadir(self, regla: str, nivel: str, ubicacion: str, extracto: str = "") -> None:
         extracto = re.sub(r"\s+", " ", extracto).strip()
@@ -451,6 +479,7 @@ class Resultado:
             "ficheros_analizados": self.ficheros_analizados,
             "idioma": idioma(),
             "notas": self.notas,
+            "seguridad": self.seguridad.a_dict() if self.seguridad is not None else None,
             "hallazgos": [{"regla": h.regla, "nivel": h.nivel, "descripcion": h.descripcion,
                            "ubicacion": h.ubicacion, "extracto": h.extracto, "peso": h.peso} for h in self.hallazgos],
             "resumen_por_marcador": {
@@ -1494,24 +1523,27 @@ def descargar(url: str, timeout: int = 20) -> tuple[str | None, str, str]:
     return datos[:MAX_TAMANO_FICHERO].decode("utf-8", errors="replace"), final, ""
 
 
-def analizar_imagenes_remotas(res: Resultado, crudo: str, url_base: str, avisos: set[str]) -> None:
-    urls = []
-    for u in urls_imagenes(crudo):
-        absoluta = urllib.parse.urljoin(url_base, u)
-        if re.match(r"https?://", absoluta, I) and absoluta not in urls:
-            urls.append(absoluta)
-    if len(urls) > MAX_IMAGENES_WEB:
-        res.notas.append(t("nota.imagenes_limite", n=MAX_IMAGENES_WEB))
+def analizar_imagenes_remotas(res: Resultado, urls: list[str], avisos: set[str], limite: int = MAX_IMAGENES_WEB,
+                              carpeta: Path | None = None, progreso=None, retardo: float = 0.0) -> None:
+    """Descarga y analiza imágenes de una web. limite=0: todas. Se guardan en una carpeta temporal que se borra."""
+    if limite and len(urls) > limite:
+        res.notas.append(t("nota.imagenes_limite", n=limite))
+        urls = urls[:limite]
     analizadas = 0
-    with tempfile.TemporaryDirectory(prefix="aimarkers-") as carpeta:
-        for indice, url in enumerate(urls[:MAX_IMAGENES_WEB]):
+    with tempfile.TemporaryDirectory(prefix="aimarkers-img-", dir=carpeta) as temporal_dir:
+        for indice, url in enumerate(urls):
+            if callable(progreso):
+                progreso(t("prog.imagenes", n=indice + 1, t=len(urls)))
+            if retardo and indice:
+                time.sleep(retardo / 2)
             datos, _, _ = descargar_bytes(url, MAX_IMAGEN_WEB, timeout=15)
             if not datos or len(datos) > MAX_IMAGEN_WEB:
                 continue
-            temporal = Path(carpeta) / f"imagen{indice}"
+            temporal = Path(temporal_dir) / f"imagen{indice}"
             temporal.write_bytes(datos)
             analizar_imagen(res, datos, url[:120], temporal, avisos)
             analizadas += 1
+            temporal.unlink(missing_ok=True)
     if analizadas:
         res.notas.append(t("nota.imagenes_web", n=analizadas))
 
@@ -1642,7 +1674,7 @@ def analizar_fichero(res: Resultado, ruta: Path, ubic: str, avisos: set[str]) ->
         res.ficheros_analizados -= 1
 
 
-def analizar_directorio(res: Resultado, raiz: Path, avisos: set[str]) -> None:
+def analizar_directorio(res: Resultado, raiz: Path, avisos: set[str]) -> list[Path]:
     rutas: list[Path] = []
     for actual, dirs, ficheros in os.walk(raiz):
         base = Path(actual)
@@ -1651,50 +1683,100 @@ def analizar_directorio(res: Resultado, raiz: Path, avisos: set[str]) -> None:
                 res.anadir("carpeta-agente", "fuerte", str((base / d).relative_to(raiz)), f"{d}/ → {DIRS_AGENTE[d]}")
         dirs[:] = [d for d in dirs if d not in DIRS_IGNORADOS and d not in DIRS_AGENTE]
         rutas += [base / f for f in ficheros if not (base / f).is_symlink()]
+    if res.solo_seguridad:
+        return rutas
     comprobar_ficheros_agente(res, raiz, rutas)
     for ruta in rutas:
         analizar_fichero(res, ruta, str(ruta.relative_to(raiz)), avisos)
     if (raiz / ".git").exists():
         res.tipo = "repo"
         analizar_git(res, raiz)
+    return rutas
 
 
-def analizar_objetivo(objetivo: str, imagenes_web: bool = True) -> Resultado:
+def _ubicacion_web(url: str, inicio: str) -> str:
+    partes = urllib.parse.urlsplit(url)
+    if not inicio or urllib.parse.urlsplit(inicio).netloc.lower().removeprefix("www.") == partes.netloc.lower().removeprefix("www."):
+        return (partes.path or "/") + (f"?{partes.query}" if partes.query else "")
+    return url
+
+
+def analizar_web_objetivo(objetivo: str, opciones) -> Resultado:
+    import aimarkers_web as web
+    avisos: set[str] = set()
+    res = Resultado(objetivo, "url")
+    res.solo_seguridad = getattr(opciones, "solo_seguridad", False)
+    with web.Rastreo(objetivo, opciones) as rastreo:
+        rastreo.ejecutar()
+        if not rastreo.paginas:
+            res.notas.append(t("nota.no_descarga", e=rastreo.error))
+            return res
+        res.notas.extend(rastreo.notas)
+        if opciones.rastrear:
+            res.notas.append(t("nota.paginas_rastreadas", n=len(rastreo.paginas)))
+            if not opciones.ignorar_robots:
+                res.notas.append(t("nota.robots"))
+        if not res.solo_seguridad:
+            for pagina in rastreo.paginas:
+                if pagina.es_html:
+                    res.ficheros_analizados += 1
+                    analizar_html(res, pagina.texto(), _ubicacion_web(pagina.url, objetivo) if opciones.rastrear else t("ub.pagina"))
+            if opciones.imagenes:
+                limite = opciones.max_imagenes if opciones.max_imagenes is not None else (0 if opciones.rastrear else MAX_IMAGENES_WEB)
+                analizar_imagenes_remotas(res, rastreo.urls_imagenes(), avisos, limite, rastreo.carpeta,
+                                          opciones.progreso, opciones.retardo if opciones.rastrear else 0.0)
+            m = re.match(r"(https?://[^/]+)", rastreo.paginas[0].url, I)
+            if m:
+                llms, _, _ = descargar(m.group(1) + "/llms.txt", timeout=10)
+                if llms and not llms.lstrip().lower().startswith(("<!doctype", "<html")):
+                    res.anadir("llms-txt", "debil", "/llms.txt", llms[:120])
+        if opciones.seguridad:
+            import aimarkers_seguridad
+            res.seguridad = aimarkers_seguridad.analizar_web(rastreo, opciones)
+            if res.solo_seguridad:
+                res.ficheros_analizados = sum(1 for p in rastreo.paginas if p.es_html)
+    return res
+
+
+def analizar_objetivo(objetivo: str, imagenes_web: bool = True, opciones=None) -> Resultado:
+    import aimarkers_web as web
+    if opciones is None:
+        opciones = web.Opciones(imagenes=imagenes_web)
     avisos: set[str] = set()
     if re.match(r"https?://", objetivo, I):
-        res = Resultado(objetivo, "url")
-        crudo, url_final, error = descargar(objetivo)
-        if crudo is None:
-            res.notas.append(t("nota.no_descarga", e=error))
-            return res
-        res.ficheros_analizados = 1
-        analizar_html(res, crudo, t("ub.pagina"))
-        if imagenes_web:
-            analizar_imagenes_remotas(res, crudo, url_final, avisos)
-        m = re.match(r"(https?://[^/]+)", url_final, I)
-        if m:
-            llms, _, _ = descargar(m.group(1) + "/llms.txt", timeout=10)
-            if llms and not llms.lstrip().lower().startswith(("<!doctype", "<html")):
-                res.anadir("llms-txt", "debil", "/llms.txt", llms[:120])
-        return res
+        return analizar_web_objetivo(objetivo, opciones)
 
+    solo = getattr(opciones, "solo_seguridad", False)
     ruta = Path(objetivo)
     if ruta.is_dir():
         res = Resultado(str(ruta.resolve()), "dir")
-        analizar_directorio(res, ruta, avisos)
+        res.solo_seguridad = solo
+        rutas = analizar_directorio(res, ruta, avisos)
+        if opciones.seguridad:
+            import aimarkers_seguridad
+            res.seguridad = aimarkers_seguridad.analizar_ficheros(rutas, ruta)
+            if solo:
+                res.ficheros_analizados = len(rutas)
         return res
     if ruta.is_file():
         ext = ruta.suffix.lower()
         tipo = ("html" if ext in EXT_HTML else "texto" if ext in EXT_TEXTO else "codigo" if ext in EXT_CODIGO
                 else "imagen" if ext in EXT_IMAGEN else "fichero")
         res = Resultado(str(ruta), tipo)
-        comprobar_ficheros_agente(res, ruta.parent, [ruta])
-        analizar_fichero(res, ruta, ruta.name, avisos)
-        if tipo == "html" and imagenes_web:
-            crudo = leer_fichero(ruta)
-            if crudo:
-                analizar_imagenes_locales(res, crudo, ruta, avisos)
-        if res.ficheros_analizados == 0 and not res.notas:
+        res.solo_seguridad = solo
+        if not solo:
+            comprobar_ficheros_agente(res, ruta.parent, [ruta])
+            analizar_fichero(res, ruta, ruta.name, avisos)
+            if tipo == "html" and opciones.imagenes:
+                crudo = leer_fichero(ruta)
+                if crudo:
+                    analizar_imagenes_locales(res, crudo, ruta, avisos)
+        if opciones.seguridad:
+            import aimarkers_seguridad
+            res.seguridad = aimarkers_seguridad.analizar_ficheros([ruta], ruta.parent)
+            if solo:
+                res.ficheros_analizados = 1
+        if res.ficheros_analizados == 0 and not res.notas and not solo:
             res.notas.append(t("nota.no_reconocido"))
         return res
 
@@ -1715,6 +1797,16 @@ def _fecha_actual() -> str:
     return datetime.now(timezone.utc).astimezone().strftime(t("ui.formato_fecha"))
 
 
+def _seccion_seguridad_consola(res: Resultado, color: bool, max_ev: int) -> list[str]:
+    if res.seguridad is None:
+        return []
+    import aimarkers_seguridad
+    lineas = aimarkers_seguridad.informe_consola(res.seguridad.a_dict(), color, max_ev)
+    if res.solo_seguridad and res.notas:
+        lineas += [f"  - {n}" for n in res.notas[:15]]
+    return lineas
+
+
 def informe_consola(resultados: list[Resultado], max_ev: int, color: bool) -> str:
     c = (lambda nivel, texto: f"{COLORES[nivel]}{texto}{RESET}") if color else (lambda nivel, texto: texto)
     salida = []
@@ -1722,6 +1814,9 @@ def informe_consola(resultados: list[Resultado], max_ev: int, color: bool) -> st
         salida.append("=" * 78)
         salida.append(f"{t('ui.objetivo')}: {res.objetivo}")
         salida.append(f"{t('ui.tipo')}: {t('tipo.' + res.tipo)}   ·   {t_ficheros(res.ficheros_analizados)}")
+        if res.solo_seguridad:
+            salida += _seccion_seguridad_consola(res, color, max_ev)
+            continue
         salida.append(f"{t('ui.puntuacion')}: {res.puntuacion()}/100  →  {res.banda()}")
         if res.atribucion_explicita():
             salida.append(c("explicito", t("ui.explicita")))
@@ -1747,6 +1842,7 @@ def informe_consola(resultados: list[Resultado], max_ev: int, color: bool) -> st
             salida += [f"  - {n}" for n in res.notas[:15]]
             if len(res.notas) > 15:
                 salida.append("  - " + t("ui.notas_mas", n=len(res.notas) - 15))
+        salida += _seccion_seguridad_consola(res, color, max_ev)
     salida.append("=" * 78)
     salida.append(t("ui.aviso"))
     return "\n".join(salida)
@@ -1757,8 +1853,12 @@ def informe_markdown(resultados: list[Resultado], max_ev: int) -> str:
     for res in resultados:
         md += [f"## {res.objetivo}", "",
                f"- **{t('ui.md_tipo')}:** {t('tipo.' + res.tipo)}",
-               f"- **{t('ui.md_ficheros')}:** {res.ficheros_analizados}",
-               f"- **{t('ui.md_puntuacion')}:** {res.puntuacion()}/100 — {res.banda()}",
+               f"- **{t('ui.md_ficheros')}:** {res.ficheros_analizados}"]
+        if res.solo_seguridad:
+            md.append("")
+            md += _seccion_seguridad_md(res)
+            continue
+        md += [f"- **{t('ui.md_puntuacion')}:** {res.puntuacion()}/100 — {res.banda()}",
                f"- **{t('ui.md_explicita')}:** {t('ui.si') if res.atribucion_explicita() else t('ui.no')}", ""]
         if res.hallazgos:
             md += [f"| {t('ui.col_nivel')} | {t('ui.col_marcador')} | {t('ui.col_veces')} | {t('ui.col_ubicacion')} | "
@@ -1776,7 +1876,15 @@ def informe_markdown(resultados: list[Resultado], max_ev: int) -> str:
             md += [t("ui.ninguno"), ""]
         if res.notas:
             md += [f"**{t('ui.notas')}**", ""] + [f"- {html.escape(n)}" for n in res.notas] + [""]
+        md += _seccion_seguridad_md(res)
     return "\n".join(md)
+
+
+def _seccion_seguridad_md(res: Resultado) -> list[str]:
+    if res.seguridad is None:
+        return []
+    import aimarkers_seguridad
+    return aimarkers_seguridad.informe_markdown(res.seguridad.a_dict())
 
 
 def informe_html(resultados: list[Resultado], max_ev: int) -> str:
@@ -1801,6 +1909,14 @@ def informe_html(resultados: list[Resultado], max_ev: int) -> str:
         notas = (f"<details><summary>{e(t('ui.notas'))}</summary><ul>" + "".join(f"<li>{e(n)}</li>" for n in res.notas)
                  + "</ul></details>") if res.notas else ""
         explicita = f"<p class='explicita'>{e(t('ui.explicita'))}</p>" if res.atribucion_explicita() else ""
+        seguridad = ""
+        if res.seguridad is not None:
+            import aimarkers_seguridad
+            seguridad = aimarkers_seguridad.informe_html(res.seguridad.a_dict())
+        if res.solo_seguridad:
+            bloques.append(f"<section><div class='cabecera'><div><h2>{e(res.objetivo)}</h2><p class='meta'>"
+                           f"{e(t('tipo.' + res.tipo))} · {e(t_ficheros(res.ficheros_analizados))}</p></div></div>{seguridad}{notas}</section>")
+            continue
         bloques.append(f"""
 <section>
   <div class="cabecera">
@@ -1809,9 +1925,13 @@ def informe_html(resultados: list[Resultado], max_ev: int) -> str:
       <p class="meta">{e(t('tipo.' + res.tipo))} · {e(t_ficheros(res.ficheros_analizados))}</p>
       <p class="banda">{e(res.banda())}</p></div>
   </div>
-  {explicita}{tabla}{notas}
+  {explicita}{tabla}{notas}{seguridad}
 </section>""")
     veces = t("ui.col_veces").replace('"', "")
+    css_seguridad = ""
+    if any(r.seguridad is not None for r in resultados):
+        import aimarkers_seguridad
+        css_seguridad = aimarkers_seguridad.CSS_HTML
     return f"""<!doctype html>
 <html lang="{idioma()}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>aimarkers · {e(t('ui.titulo'))}</title>
@@ -1844,6 +1964,7 @@ details {{ margin-top:12px; color:var(--sub) }}
 @media (max-width:640px) {{ table, tbody, tr, td {{ display:block }} thead {{ display:none }}
   td {{ border:none; padding:4px 0 }} tr {{ border-top:1px solid var(--borde); padding:8px 0 }}
   td.num {{ text-align:left; color:var(--sub) }} td.num::before {{ content:"{veces}: " }} }}
+{css_seguridad}
 </style></head>
 <body><main>
 <h1>{e(t('ui.titulo'))}</h1>
@@ -1898,19 +2019,46 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--silencioso", "--quiet", dest="silencioso", action="store_true", help=t("cli.silencioso"))
     ap.add_argument("--sin-imagenes", "--no-images", dest="sin_imagenes", action="store_true", help=t("cli.sin_imagenes"))
     ap.add_argument("--umbral", "--threshold", dest="umbral", type=int, default=None, help=t("cli.umbral"))
+    ap.add_argument("--rastrear", "--crawl", dest="rastrear", action="store_true", help=t("cli.rastrear"))
+    ap.add_argument("--max-paginas", "--max-pages", dest="max_paginas", type=int, default=0, help=t("cli.max_paginas"))
+    ap.add_argument("--max-imagenes", "--max-images", dest="max_imagenes", type=int, default=None, help=t("cli.max_imagenes"))
+    ap.add_argument("--retardo", "--delay", dest="retardo", type=float, default=0.3, help=t("cli.retardo"))
+    ap.add_argument("--seguridad", "--security", dest="seguridad", action="store_true", help=t("cli.seguridad"))
+    ap.add_argument("--solo-seguridad", "--security-only", dest="solo_seguridad", action="store_true", help=t("cli.solo_seguridad"))
+    ap.add_argument("--activo", "--active", dest="activo", action="store_true", help=t("cli.activo"))
+    ap.add_argument("--autorizado", "--authorized", dest="autorizado", action="store_true", help=t("cli.autorizado"))
+    ap.add_argument("--umbral-cvss", "--cvss-threshold", dest="umbral_cvss", type=float, default=None, help=t("cli.umbral_cvss"))
     ap.add_argument("--version", action="version", version=f"aimarkers {VERSION}")
     args = ap.parse_args(argumentos)
 
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    sys.modules.setdefault("aimarkers", sys.modules[__name__])  # los módulos auxiliares usan este mismo módulo
     if args.gui:
-        sys.path.insert(0, str(Path(__file__).resolve().parent))
-        sys.modules.setdefault("aimarkers", sys.modules[__name__])  # el GUI usa este mismo módulo
         import aimarkers_gui
         return aimarkers_gui.iniciar(args.port, abrir_navegador=not args.sin_navegador,
                                      idioma_forzado=bool(args.lang or os.environ.get("AIMARKERS_LANG")))
     if not args.objetivos:
         ap.error(t("cli.sin_objetivos"))
 
-    resultados = [analizar_objetivo(o, imagenes_web=not args.sin_imagenes) for o in args.objetivos]
+    if args.activo and not args.autorizado:
+        import aimarkers_seguridad
+        ap.error(t("seg.activo_sin_autorizacion"))
+    import aimarkers_web
+
+    def progreso(texto: str) -> None:
+        if sys.stderr.isatty() and not args.silencioso:
+            sys.stderr.write("\r\033[K" + texto[:100])
+            sys.stderr.flush()
+
+    opciones = aimarkers_web.Opciones(
+        rastrear=args.rastrear, max_paginas=args.max_paginas, max_imagenes=args.max_imagenes, retardo=max(0.0, args.retardo),
+        imagenes=not args.sin_imagenes, seguridad=args.seguridad or args.solo_seguridad or args.activo, activo=args.activo,
+        autorizado=args.autorizado, solo_seguridad=args.solo_seguridad, progreso=progreso)
+    if opciones.seguridad:
+        import aimarkers_seguridad  # noqa: F401 - registra sus textos para el informe
+    resultados = [analizar_objetivo(o, opciones=opciones) for o in args.objetivos]
+    if sys.stderr.isatty() and not args.silencioso:
+        sys.stderr.write("\r\033[K")
 
     if not args.silencioso:
         color = sys.stdout.isatty() and not args.sin_color and os.environ.get("NO_COLOR") is None
@@ -1930,6 +2078,10 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.umbral is not None and any(r.puntuacion() >= args.umbral for r in resultados):
         return 2
+    if args.umbral_cvss is not None and any(
+            h["cvss"] is not None and h["cvss"] >= args.umbral_cvss
+            for r in resultados if r.seguridad is not None for h in r.seguridad.a_dict()["hallazgos"]):
+        return 3
     return 0
 
 

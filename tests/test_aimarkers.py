@@ -1,5 +1,8 @@
 """Pruebas de aimarkers / aimarkers tests. Ejecutar / run: python -m unittest discover tests -v"""
+import contextlib
 import http.client
+import http.server
+import io
 import json
 import os
 import random
@@ -304,10 +307,191 @@ class PruebasInterfaz(unittest.TestCase):
         self.assertEqual(resultado["objetivo"], "carpeta")
         self.assertIn("parametros-generacion", resultado["resumen_por_marcador"])
 
+    def test_activo_sin_autorizacion_rechazado(self):
+        estado, _, _ = self.peticion("POST", "/api/analyze", {"objetivo": "http://127.0.0.1:9/", "activo": True})
+        self.assertEqual(estado, 400)
+        estado, _, cuerpo = self.peticion("GET", "/api/progress")
+        self.assertEqual(estado, 200)
+        self.assertIn("texto", json.loads(cuerpo))
+
     def test_ruta_relativa_segura(self):
         self.assertEqual(str(self.gui.ruta_relativa_segura("a/./b\\c.txt")), "a/b/c.txt")
         for mala in ("..", "../a", "a/../../b", "", "\x00", "C:\\a"):
             self.assertIsNone(self.gui.ruta_relativa_segura(mala), mala)
+
+
+class SitioDePrueba(http.server.BaseHTTPRequestHandler):
+    """Web local con fallos de seguridad típicos (solo para las pruebas)."""
+
+    PAGINAS = {
+        "/": ("text/html; charset=utf-8", """<!doctype html><html><head><title>Inicio</title>
+<meta name="generator" content="WordPress 6.1.1">
+<script src="/app.js"></script>
+<script src="https://cdn.example.org/libs/jquery-1.12.4.min.js"></script>
+</head><body><!-- TODO: quitar la password del admin -->
+<p>Escríbenos a contacto@colegio.example</p>
+<a href="/pagina2">Siguiente</a> <a href="/privado/datos">Privado</a>
+<form method="post" action="/login"><input name="usuario"><input type="password" name="clave"><button>Entrar</button></form>
+</body></html>"""),
+        "/pagina2": ("text/html", "<html><body><a href='/'>Inicio</a><a href='/pagina3'>3</a></body></html>"),
+        "/pagina3": ("text/html", "<html><body><p>Final</p></body></html>"),
+        "/privado/datos": ("text/html", "<html><body>No debería descargarse</body></html>"),
+        "/robots.txt": ("text/plain", "User-agent: *\nDisallow: /privado/\nDisallow: /backup-admin/\n"),
+        "/app.js": ("application/javascript", "/*! jQuery v1.12.4 */ var a=1;\n//# sourceMappingURL=app.js.map"),
+        "/.git/HEAD": ("text/plain", "ref: refs/heads/main\n"),
+    }
+    visitas: list[str] = []
+
+    def log_message(self, *args):
+        return
+
+    def do_GET(self):
+        SitioDePrueba.visitas.append(self.path)
+        datos = self.PAGINAS.get(self.path)
+        if datos is None:
+            cuerpo = b"<html><body>No encontrado</body></html>"
+            self.send_response(404)
+        else:
+            cuerpo = datos[1].encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", datos[0])
+        if self.path == "/":
+            self.send_header("Set-Cookie", "PHPSESSID=abc123; path=/")
+            self.send_header("Server", "Apache/2.4.41 (Ubuntu)")
+            self.send_header("X-Powered-By", "PHP/7.4.3")
+        self.send_header("Content-Length", str(len(cuerpo)))
+        self.end_headers()
+        self.wfile.write(cuerpo)
+
+    def do_OPTIONS(self):
+        self.send_response(200)
+        self.send_header("Allow", "GET, POST, OPTIONS, TRACE")
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
+
+class PruebasSeguridadYRastreo(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        import aimarkers_seguridad
+        import aimarkers_web
+        cls.seg = aimarkers_seguridad
+        cls.web = aimarkers_web
+        cls.entorno = {k: os.environ.get(k) for k in ("no_proxy", "NO_PROXY")}
+        for clave in ("no_proxy", "NO_PROXY"):
+            os.environ[clave] = "127.0.0.1,localhost"
+        cls.servidor = http.server.ThreadingHTTPServer(("127.0.0.1", 0), SitioDePrueba)
+        threading.Thread(target=cls.servidor.serve_forever, daemon=True).start()
+        cls.url = f"http://127.0.0.1:{cls.servidor.server_address[1]}/"
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.servidor.shutdown()
+        cls.servidor.server_close()
+        for clave, valor in cls.entorno.items():
+            if valor is None:
+                os.environ.pop(clave, None)
+            else:
+                os.environ[clave] = valor
+        aimarkers.fijar_idioma("es")
+
+    def opciones(self, **extra):
+        return self.web.Opciones(retardo=0, imagenes=False, **extra)
+
+    def test_rastreo_respeta_robots_y_limite(self):
+        SitioDePrueba.visitas.clear()
+        res = aimarkers.analizar_objetivo(self.url, opciones=self.opciones(rastrear=True))
+        self.assertEqual(res.ficheros_analizados, 3)
+        self.assertNotIn("/privado/datos", SitioDePrueba.visitas)
+        limitado = aimarkers.analizar_objetivo(self.url, opciones=self.opciones(rastrear=True, max_paginas=2))
+        self.assertEqual(limitado.ficheros_analizados, 2)
+        self.assertTrue(any("2" in n for n in limitado.notas))
+
+    def test_rastreo_borra_la_carpeta_temporal(self):
+        with self.web.Rastreo(self.url, self.opciones(rastrear=True)) as rastreo:
+            rastreo.ejecutar()
+            carpeta = rastreo.carpeta
+            self.assertTrue(any(carpeta.iterdir()))
+        self.assertFalse(carpeta.exists())
+
+    def test_seguridad_pasiva(self):
+        SitioDePrueba.visitas.clear()
+        res = aimarkers.analizar_objetivo(self.url, opciones=self.opciones(seguridad=True, rastrear=True))
+        datos = res.seguridad.a_dict()
+        ids = {h["id"] for h in datos["hallazgos"]}
+        for esperado in ("sin-https", "sin-csp", "sin-antiframe", "sin-nosniff", "cookie-sin-httponly", "cookie-sin-samesite",
+                         "version-expuesta", "sin-csrf", "comentarios-sensibles", "emails-expuestos", "sin-sri",
+                         "libreria-vulnerable", "source-map", "cms-version", "robots-sensible", "sin-security-txt"):
+            self.assertIn(esperado, ids, esperado)
+        # el modo pasivo no pide rutas sensibles
+        self.assertNotIn("/.git/HEAD", SitioDePrueba.visitas)
+        self.assertNotIn("git-expuesto", ids)
+        jquery = next(h for h in datos["hallazgos"] if h["id"] == "libreria-vulnerable")
+        self.assertIn("CVE-2020-11022", jquery["cve"])
+        self.assertTrue(all(m["id"] in self.seg.MITRE for h in datos["hallazgos"] for m in h["mitre"]))
+        self.assertEqual(datos["requisitos"]["CR"], "H")  # hay inicio de sesión
+        self.assertEqual(sum(map(sum, datos["matriz"])), len(datos["hallazgos"]))
+        for h in datos["hallazgos"]:
+            if h["vector"]:
+                self.assertEqual(h["cvss"], self.seg.cvss4.puntuacion(h["vector"]))
+                self.assertTrue(h["vector"].startswith("CVSS:4.0/AV:"))
+
+    def test_seguridad_activa_exige_autorizacion(self):
+        SitioDePrueba.visitas.clear()
+        sin = aimarkers.analizar_objetivo(self.url, opciones=self.opciones(seguridad=True, activo=True))
+        self.assertNotIn("/.git/HEAD", SitioDePrueba.visitas)
+        self.assertEqual(sin.seguridad.modo, "pasivo")
+        con = aimarkers.analizar_objetivo(self.url, opciones=self.opciones(seguridad=True, activo=True, autorizado=True))
+        ids = {h["id"] for h in con.seguridad.a_dict()["hallazgos"]}
+        self.assertIn("git-expuesto", ids)
+        self.assertIn("metodos-peligrosos", ids)
+        self.assertNotIn("env-expuesto", ids)  # 404: no hay falso positivo
+        self.assertEqual(con.seguridad.modo, "activo")
+
+    def test_cli_activo_sin_autorizado_falla(self):
+        with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
+            aimarkers.main([self.url, "--activo", "--silencioso"])
+
+    def test_seguridad_de_codigo(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            d = Path(tmp)
+            (d / ".github" / "workflows").mkdir(parents=True)
+            (d / "app.py").write_text("import pickle, subprocess, hashlib\nDEBUG = True\nDB_" + "PASSWORD = 'Sup3rS3cr3tPass!'\n"
+                                      "cur.execute(\"SELECT * FROM t WHERE n = '\" + n + \"'\")\n"
+                                      "subprocess.run('ls ' + x, shell=True)\npickle.loads(b)\nrequests.get(u, verify=False)\n",
+                                      encoding="utf-8")
+            (d / "web.js").write_text("el.innerHTML = location.hash;\n", encoding="utf-8")
+            (d / "Dockerfile").write_text("FROM python:latest\n", encoding="utf-8")
+            (d / "requirements.txt").write_text("flask\n", encoding="utf-8")
+            (d / ".github" / "workflows" / "ci.yml").write_text("steps:\n  - uses: actions/checkout@v4\n", encoding="utf-8")
+            (d / "config.py").write_text("K = '" + "AKIA" + "Q" * 16 + "'\n", encoding="utf-8")
+            (d / "seguro.py").write_text("import os\nclave = os.environ['CLAVE']\nhashlib.md5(b, usedforsecurity=False)\n"
+                                         "ok = verify_mode != ssl.CERT_NONE\n", encoding="utf-8")
+            res = aimarkers.analizar_objetivo(str(d), opciones=self.web.Opciones(seguridad=True, solo_seguridad=True))
+        datos = res.seguridad.a_dict()
+        ids = {h["id"] for h in datos["hallazgos"]}
+        for esperado in ("secreto-codigo", "inyeccion-sql", "inyeccion-comandos", "deserializacion", "tls-desactivado",
+                         "modo-depuracion", "xss-dom", "imagen-latest", "contenedor-root", "dependencia-sin-fijar",
+                         "accion-sin-fijar"):
+            self.assertIn(esperado, ids, esperado)
+        textos = json.dumps(datos)
+        self.assertNotIn("seguro.py", textos)
+        self.assertNotIn("Q" * 16, textos)  # los secretos se muestran recortados
+        self.assertEqual(res.puntuacion(), 0)  # solo seguridad: sin marcadores de IA
+
+    def test_informes_con_seguridad(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            salida = Path(tmp)
+            codigo = aimarkers.main([self.url, "--seguridad", "--silencioso", "--retardo", "0", "--sin-imagenes", "--lang", "en",
+                                     "--json", str(salida / "r.json"), "--md", str(salida / "r.md"), "--html", str(salida / "r.html"),
+                                     "--umbral-cvss", "0.1"])
+            self.assertEqual(codigo, 3)
+            datos = json.loads((salida / "r.json").read_text(encoding="utf-8"))
+            self.assertEqual(datos[0]["seguridad"]["cvss_version"], "CVSS v4.0")
+            pagina = (salida / "r.html").read_text(encoding="utf-8")
+            self.assertIn("class='matriz'", pagina)
+            self.assertNotIn("<script", pagina.lower())
+            self.assertIn("OWASP", (salida / "r.md").read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":
