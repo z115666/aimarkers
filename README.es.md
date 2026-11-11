@@ -131,9 +131,10 @@ El idioma afecta a la consola y a los informes. Los identificadores de los marca
 | `--max-paginas N` / `--max-imagenes N` / `--retardo S` | Límites del rastreo (`-1` / `0`: sin límite) y pausa entre peticiones |
 | `--seguridad` / `--solo-seguridad` | Añade el análisis de seguridad / hace solo el análisis de seguridad |
 | `--activo --autorizado` | Modo de seguridad activo, solo con autorización (ver más abajo) |
+| `--sin-dns` | Omite las comprobaciones de SPF, DMARC, DNSSEC y CAA |
 | `--umbral-cvss N` | Sale con código 3 si algún hallazgo de seguridad llega a CVSS N |
 
-Cada opción tiene también su nombre en inglés: `--evidence`, `--threshold`, `--no-images`, `--quiet`, `--no-color`, `--crawl`, `--max-pages`, `--max-images`, `--delay`, `--security`, `--security-only`, `--active`, `--authorized`, `--cvss-threshold`.
+Cada opción tiene también su nombre en inglés: `--evidence`, `--threshold`, `--no-images`, `--quiet`, `--no-color`, `--crawl`, `--max-pages`, `--max-images`, `--delay`, `--security`, `--security-only`, `--no-dns`, `--active`, `--authorized`, `--cvss-threshold`.
 
 ## Interfaz gráfica
 
@@ -145,7 +146,7 @@ python3 aimarkers.py --gui      # macOS / Linux desde la carpeta
 py aimarkers.py --gui           # Windows
 ```
 
-Se abre en el navegador. Arrastra ficheros, carpetas o imágenes a la ventana, escribe una ruta o una URL, o usa **Elegir archivo** / **Elegir carpeta** (el selector del sistema). Cada análisis queda en la lista lateral durante la sesión y puedes guardar el informe en HTML, Markdown o JSON. Tiene apariencia clara y oscura (o la del sistema) y cambia entre español e inglés. Para cerrarla, pulsa Ctrl+C en la terminal.
+Se abre en el navegador. Mientras trabaja muestra el porcentaje total, una estimación del tiempo que queda, cada fase del análisis y, con palabras sencillas, qué está comprobando en cada momento. Arrastra ficheros, carpetas o imágenes a la ventana, escribe una ruta o una URL, o usa **Elegir archivo** / **Elegir carpeta** (el selector del sistema). Cada análisis queda en la lista lateral durante la sesión y puedes guardar el informe en HTML, Markdown o JSON. Tiene apariencia clara y oscura (o la del sistema) y cambia entre español e inglés. Para cerrarla, pulsa Ctrl+C en la terminal.
 
 ![Interfaz gráfica de aimarkers](docs/gui-light.png)
 
@@ -174,7 +175,15 @@ aimarkers https://ejemplo.com --rastrear --max-imagenes 200 --retardo 1
 - Puntuación **CVSS v4.0** calculada dentro de la herramienta con el algoritmo oficial de FIRST (`cvss4.py`, comprobado contra la calculadora de referencia con 20.000 vectores). Cada hallazgo parte de un vector base tipo; la métrica de amenaza (E) refleja si hay exploits públicos, y los requisitos de entorno (CR, IR, AR) salen del **contexto de la web**: formularios de acceso, datos personales, pagos o subida de ficheros los elevan.
 - Posición en una **matriz de riesgos 5×5** (probabilidad × impacto, al estilo ISO 27005): la probabilidad sale de la explotabilidad CVSS y la madurez del exploit; el impacto, del efecto sobre cada dimensión CID ponderado por el contexto.
 
-**Webs, modo pasivo (por defecto).** Solo mira lo que recibe cualquier visitante: HTTPS y redirección, certificado y versión de TLS, HSTS, CSP, protección frente a marcos, nosniff, Referrer-Policy, Permissions-Policy, versiones expuestas, CORS, atributos de las cookies, contenido mixto, scripts de terceros sin SRI, librerías JavaScript con CVE conocidos (jQuery, jQuery UI, Bootstrap, AngularJS, Lodash, Moment, Handlebars), formularios por HTTP, contraseñas enviadas por GET, formularios sin token anti-CSRF, comentarios HTML sensibles, mensajes de error detallados, listado de directorios, claves y tokens expuestos, mapas de código, `robots.txt` y `security.txt`.
+**Webs, modo pasivo (por defecto).** Solo mira lo que recibe cualquier visitante: HTTPS y redirección, certificado y versión de TLS, HSTS, CSP, protección frente a marcos, nosniff, Referrer-Policy, Permissions-Policy, versiones expuestas, CORS, atributos de las cookies, contenido mixto, scripts de terceros sin SRI, librerías JavaScript con CVE conocidos (jQuery, jQuery UI, Bootstrap, AngularJS, Lodash, Moment, Handlebars), formularios por HTTP, contraseñas enviadas por GET, formularios sin token anti-CSRF, enlaces vulnerables a *reverse tabnabbing*, comentarios HTML sensibles, mensajes de error detallados, listado de directorios, claves y tokens expuestos, mapas de código, `robots.txt` y `security.txt`.
+
+**Correo y DNS.** SPF, DMARC, DNSSEC y CAA del dominio, que protegen a familias y personal frente a correos que suplantan el dominio. Se consultan por DNS sobre HTTPS (Cloudflare, con Google como respaldo): solo se envía el nombre del dominio. `--sin-dns` los omite.
+
+**Privacidad y terceros.** Lista los servicios externos que cargan las páginas (analítica, publicidad, vídeo, fuentes, mapas, CDN) y señala los rastreadores, Google Fonts y los vídeos de YouTube sin modo de privacidad, relevantes para el RGPD en webs con menores o datos personales.
+
+**Inventario de componentes.** CMS, plugins y temas con su versión, librerías JavaScript, servidor web y lenguaje: un punto de partida para el inventario de activos y la gestión de parches.
+
+**Resultados segmentados.** Los hallazgos se agrupan por categorías (transporte y cifrado, cabeceras, sesión, contenido, componentes, exposición de información, correo y DNS, privacidad, código), cada una con su resumen de riesgo. En la interfaz se pueden reagrupar por riesgo, categoría, OWASP o dimensión CID, y ver los marcadores de IA por fichero o página.
 
 **Webs, modo activo (`--activo --autorizado`).** Además pide rutas sensibles conocidas (`/.git`, `/.env`, copias de seguridad y volcados SQL, copias de `wp-config`, `phpinfo`, `server-status`, enumeración de usuarios y XML-RPC de WordPress, paneles de administración), métodos HTTP peligrosos, reflejo de origen en CORS y si acepta TLS 1.0/1.1. No envía cargas de inyección, contraseñas ni exploits. **Úsalo solo en webs propias o con autorización por escrito**: sondear sin permiso puede ser delito (artículo 197 bis del Código Penal). Sin `--autorizado`, la herramienta no arranca el modo activo.
 

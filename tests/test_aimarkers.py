@@ -312,7 +312,7 @@ class PruebasInterfaz(unittest.TestCase):
         self.assertEqual(estado, 400)
         estado, _, cuerpo = self.peticion("GET", "/api/progress")
         self.assertEqual(estado, 200)
-        self.assertIn("texto", json.loads(cuerpo))
+        self.assertIn("porcentaje", json.loads(cuerpo))
 
     def test_ruta_relativa_segura(self):
         self.assertEqual(str(self.gui.ruta_relativa_segura("a/./b\\c.txt")), "a/b/c.txt")
@@ -328,9 +328,13 @@ class SitioDePrueba(http.server.BaseHTTPRequestHandler):
 <meta name="generator" content="WordPress 6.1.1">
 <script src="/app.js"></script>
 <script src="https://cdn.example.org/libs/jquery-1.12.4.min.js"></script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-TEST"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter">
+<script src="/wp-content/plugins/ninja-forms/assets/js/front-end.js?ver=3.14.7"></script>
 </head><body><!-- TODO: quitar la password del admin -->
 <p>Escríbenos a contacto@colegio.example</p>
-<a href="/pagina2">Siguiente</a> <a href="/privado/datos">Privado</a>
+<a href="/pagina2">Siguiente</a> <a href="https://otra.example/" target="_blank">Externo</a>
+<iframe src="https://www.youtube.com/embed/abc"></iframe> <a href="/privado/datos">Privado</a>
 <form method="post" action="/login"><input name="usuario"><input type="password" name="clave"><button>Entrar</button></form>
 </body></html>"""),
         "/pagina2": ("text/html", "<html><body><a href='/'>Inicio</a><a href='/pagina3'>3</a></body></html>"),
@@ -435,6 +439,56 @@ class PruebasSeguridadYRastreo(unittest.TestCase):
             if h["vector"]:
                 self.assertEqual(h["cvss"], self.seg.cvss4.puntuacion(h["vector"]))
                 self.assertTrue(h["vector"].startswith("CVSS:4.0/AV:"))
+
+    def test_segmentacion_inventario_privacidad_y_progreso(self):
+        avances = []
+        res = aimarkers.analizar_objetivo(self.url, opciones=self.opciones(seguridad=True, rastrear=True, progreso=avances.append))
+        datos = res.seguridad.a_dict()
+        ids = {h["id"] for h in datos["hallazgos"]}
+        for esperado in ("rastreadores-terceros", "fuentes-google", "youtube-sin-privacidad", "tabnabbing"):
+            self.assertIn(esperado, ids, esperado)
+        categorias = {c["id"] for c in datos["categorias"]}
+        self.assertTrue({"cabeceras", "privacidad", "componentes", "transporte"} <= categorias)
+        self.assertEqual(sum(c["total"] for c in datos["categorias"]), len(datos["hallazgos"]))
+        self.assertTrue(all(h["categoria"] in self.seg.CATEGORIAS for h in datos["hallazgos"]))
+        inventario = {(c["tipo"], c["nombre"]) for c in datos["inventario"]}
+        self.assertIn(("plugin", "ninja-forms"), inventario)
+        self.assertIn(("libreria", "jQuery"), inventario)
+        self.assertIn(("cms", "WordPress"), inventario)
+        hosts = {x["host"]: x for x in datos["terceros"]}
+        self.assertTrue(hosts["www.googletagmanager.com"]["rastreador"])
+        fases = {a["fase"] for a in avances if isinstance(a, dict)}
+        self.assertTrue({"descarga", "ia", "seguridad"} <= fases)
+        self.assertTrue(set(self.seg.CATEGORIA) <= set(self.seg.CATALOGO))
+        self.assertEqual(set(self.seg.CATEGORIA), set(self.seg.CATALOGO))
+
+    def test_dns_correo(self):
+        respuestas = {
+            ("ejemplo.es", "TXT"): (['"v=spf1 include:_spf.google.com ?all"'], False, "Prueba"),
+            ("_dmarc.ejemplo.es", "TXT"): (['"v=DMARC1; p=none; rua=mailto:x@ejemplo.es"'], False, "Prueba"),
+            ("ejemplo.es", "A"): (["192.0.2.1"], False, "Prueba"),
+            ("ejemplo.es", "CAA"): ([], False, "Prueba"),
+            ("sinnada.es", "TXT"): ([], True, "Prueba"),
+            ("_dmarc.sinnada.es", "TXT"): ([], True, "Prueba"),
+            ("sinnada.es", "A"): (["192.0.2.2"], True, "Prueba"),
+            ("sinnada.es", "CAA"): (['0 issue "letsencrypt.org"'], True, "Prueba"),
+        }
+        original = self.seg.consulta_dns
+        self.seg.consulta_dns = lambda nombre, tipo: respuestas.get((nombre, tipo), ([], None, ""))
+        try:
+            uno = self.seg.InformeSeguridad()
+            self.seg.analizar_dns(uno, "www.ejemplo.es")
+            dos = self.seg.InformeSeguridad()
+            self.seg.analizar_dns(dos, "sinnada.es")
+            tres = self.seg.InformeSeguridad()
+            self.seg.analizar_dns(tres, "127.0.0.1")
+        finally:
+            self.seg.consulta_dns = original
+        ids_uno = {h.id for h in uno.hallazgos.values()}
+        self.assertEqual(ids_uno, {"spf-permisivo", "dmarc-sin-politica", "dnssec-ausente", "caa-ausente"})
+        self.assertEqual({h.id for h in dos.hallazgos.values()}, {"spf-ausente", "dmarc-ausente"})
+        self.assertEqual(tres.hallazgos, {})
+        self.assertEqual(self.seg._txt('"v=spf1 " "-all"'), "v=spf1 -all")
 
     def test_seguridad_activa_exige_autorizacion(self):
         SitioDePrueba.visitas.clear()

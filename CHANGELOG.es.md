@@ -4,6 +4,17 @@
 
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [1.4.0] - 2026-11-11
+
+### Añadido
+- Seguridad: comprobaciones de correo y DNS (SPF, DMARC, DNSSEC, CAA) por DNS sobre HTTPS (`--sin-dns` para omitirlas); privacidad y servicios de terceros (rastreadores, Google Fonts, YouTube sin modo de privacidad); *reverse tabnabbing*; Cross-Origin-Opener-Policy; enumeración de usuarios de WordPress con `?author=1` y versión mediante `readme.html` en modo activo.
+- Inventario de componentes (CMS, plugins, temas, librerías, servidor) y lista de servicios de terceros en la interfaz y los informes.
+- Hallazgos segmentados en nueve categorías con resumen de riesgo por categoría; la interfaz los reagrupa por riesgo, categoría, OWASP o dimensión CID, y muestra los marcadores de IA por fichero o página.
+- Interfaz: pantalla de progreso con porcentaje, tiempo restante, fases y descripción sencilla de cada comprobación.
+
+### Corregido
+- Informes HTML: las URLs y el código largos ya no se salen de la tarjeta del informe.
+
 ## [1.3.1] - 2026-11-11
 
 ### Añadido

@@ -46,7 +46,7 @@ from datetime import datetime, timezone
 from html.parser import HTMLParser
 from pathlib import Path
 
-VERSION = "1.3.1"
+VERSION = "1.4.0"
 
 # ---------------------------------------------------------------------------
 # Idioma / Language
@@ -171,6 +171,17 @@ TEXTOS: dict[str, tuple[str, str]] = {
     "nota.estado_http": ("La web respondió con el estado HTTP {n}: el análisis corresponde a esa página de error.",
                          "The website answered with HTTP status {n}: the analysis covers that error page."),
     "nota.robots": ("Se ha respetado robots.txt.", "robots.txt was respected."),
+    "fase.subida": ("Preparando ficheros", "Preparing files"),
+    "fase.descarga": ("Descargando el sitio", "Downloading the site"),
+    "fase.ia": ("Buscando marcadores de IA", "Looking for AI markers"),
+    "fase.imagenes": ("Leyendo metadatos de imágenes", "Reading image metadata"),
+    "fase.ficheros": ("Analizando ficheros", "Analysing files"),
+    "fase.git": ("Revisando el historial de Git", "Reviewing Git history"),
+    "fase.scripts": ("Descargando JavaScript del sitio", "Downloading site JavaScript"),
+    "fase.seguridad": ("Comprobando la seguridad", "Checking security"),
+    "fase.dns": ("Consultando DNS del dominio", "Querying the domain's DNS"),
+    "fase.activo": ("Comprobando rutas sensibles", "Checking sensitive paths"),
+    "fase.codigo": ("Revisando la seguridad del código", "Reviewing code security"),
     "prog.paginas": ("Rastreando: {n} páginas", "Crawling: {n} pages"),
     "prog.scripts": ("Descargando JavaScript del sitio: {n}", "Downloading site JavaScript: {n}"),
     "prog.imagenes": ("Analizando imágenes: {n} de {t}", "Analysing images: {n} of {t}"),
@@ -236,6 +247,8 @@ TEXTOS: dict[str, tuple[str, str]] = {
                     "Pause in seconds between requests when crawling (default 0.3)"),
     "cli.seguridad": ("Añadir el análisis de seguridad (OWASP Top 10, MITRE ATT&CK, CVSS v4.0, matriz de riesgos CID)",
                       "Add the security analysis (OWASP Top 10, MITRE ATT&CK, CVSS v4.0, CIA risk matrix)"),
+    "cli.sin_dns": ("No consultar SPF, DMARC, DNSSEC ni CAA (se consultan por DNS sobre HTTPS)",
+                    "Do not query SPF, DMARC, DNSSEC or CAA (queried over DNS over HTTPS)"),
     "cli.activo": ("Seguridad en modo activo: comprueba rutas sensibles conocidas (exige --autorizado)",
                    "Active security mode: checks known sensitive paths (requires --authorized)"),
     "cli.autorizado": ("Declaras que tienes autorización para analizar la web en modo activo",
@@ -333,6 +346,29 @@ def t_ficheros(n: int) -> str:
 
 def t_lineas(n: int, ejemplo: str) -> str:
     return t("ev.lineas_1", e=ejemplo) if n == 1 else t("ev.lineas_n", n=n, e=ejemplo)
+
+
+# ---------------------------------------------------------------------------
+# Avance del análisis (para la barra de progreso de la interfaz y la consola)
+# ---------------------------------------------------------------------------
+
+FASES = ("subida", "descarga", "ia", "imagenes", "ficheros", "git", "scripts", "seguridad", "dns", "activo", "codigo")
+_AVANCE: dict = {"f": None}
+
+
+def fijar_avance(funcion) -> None:
+    _AVANCE["f"] = funcion if callable(funcion) else None
+
+
+def informar(fase: str, hecho: int = 0, total: int = 0, detalle: str = "") -> None:
+    """Comunica el avance de una fase; nunca interrumpe el análisis si el receptor falla."""
+    funcion = _AVANCE["f"]
+    if funcion is None:
+        return
+    try:
+        funcion({"fase": fase, "hecho": int(hecho), "total": int(total), "detalle": str(detalle)[:160]})
+    except Exception:  # noqa: BLE001 - el progreso es informativo: si el receptor falla, se desactiva
+        _AVANCE["f"] = None
 
 
 # ---------------------------------------------------------------------------
@@ -1534,8 +1570,7 @@ def analizar_imagenes_remotas(res: Resultado, urls: list[str], avisos: set[str],
     analizadas = 0
     with tempfile.TemporaryDirectory(prefix="aimarkers-img-", dir=carpeta) as temporal_dir:
         for indice, url in enumerate(urls):
-            if callable(progreso):
-                progreso(t("prog.imagenes", n=indice + 1, t=len(urls)))
+            informar("imagenes", indice, len(urls), url)
             if retardo and indice:
                 time.sleep(retardo / 2)
             datos, _, _ = descargar_bytes(url, MAX_IMAGEN_WEB, timeout=15)
@@ -1688,10 +1723,13 @@ def analizar_directorio(res: Resultado, raiz: Path, avisos: set[str]) -> list[Pa
     if res.solo_seguridad:
         return rutas
     comprobar_ficheros_agente(res, raiz, rutas)
-    for ruta in rutas:
+    for indice, ruta in enumerate(rutas):
+        if indice % 10 == 0:
+            informar("ficheros", indice, len(rutas), str(ruta.relative_to(raiz)))
         analizar_fichero(res, ruta, str(ruta.relative_to(raiz)), avisos)
     if (raiz / ".git").exists():
         res.tipo = "repo"
+        informar("git", 0, 1)
         analizar_git(res, raiz)
     return rutas
 
@@ -1721,7 +1759,8 @@ def analizar_web_objetivo(objetivo: str, opciones) -> Resultado:
             if not opciones.ignorar_robots:
                 res.notas.append(t("nota.robots"))
         if not res.solo_seguridad:
-            for pagina in rastreo.paginas:
+            for indice, pagina in enumerate(rastreo.paginas):
+                informar("ia", indice, len(rastreo.paginas), pagina.url)
                 if pagina.es_html:
                     res.ficheros_analizados += 1
                     analizar_html(res, pagina.texto(), _ubicacion_web(pagina.url, objetivo) if opciones.rastrear else t("ub.pagina"))
@@ -1746,6 +1785,7 @@ def analizar_objetivo(objetivo: str, imagenes_web: bool = True, opciones=None) -
     import aimarkers_web as web
     if opciones is None:
         opciones = web.Opciones(imagenes=imagenes_web)
+    fijar_avance(opciones.progreso)
     avisos: set[str] = set()
     if re.match(r"https?://", objetivo, I):
         return analizar_web_objetivo(objetivo, opciones)
@@ -1960,7 +2000,8 @@ section {{ background:var(--card); border:1px solid var(--borde); border-radius:
 .explicita {{ color:var(--exp); font-weight:600 }}
 table {{ width:100%; border-collapse:collapse; font-size:14px }} th,td {{ text-align:left; vertical-align:top;
   padding:8px; border-top:1px solid var(--borde) }} th {{ color:var(--sub); font-weight:600 }}
-td ul {{ margin:0; padding-left:16px }} code {{ font-size:12px; color:var(--sub) }} .num {{ text-align:right }}
+td ul {{ margin:0; padding-left:16px }} code {{ font-size:12px; color:var(--sub); word-break:break-all }} .num {{ text-align:right }}
+td {{ overflow-wrap:anywhere }} section {{ overflow:hidden }} a {{ color:var(--deb) }} a:visited {{ color:var(--deb) }}
 .nivel {{ font-size:12px; font-weight:700; padding:2px 8px; border-radius:99px; color:#fff; white-space:nowrap }}
 .explicito {{ background:var(--exp) }} .fuerte {{ background:var(--fue) }} .medio {{ background:var(--med) }}
 .debil {{ background:var(--deb) }} .mas {{ color:var(--sub); list-style:none }}
@@ -2029,6 +2070,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--retardo", "--delay", dest="retardo", type=float, default=0.3, help=t("cli.retardo"))
     ap.add_argument("--seguridad", "--security", dest="seguridad", action="store_true", help=t("cli.seguridad"))
     ap.add_argument("--solo-seguridad", "--security-only", dest="solo_seguridad", action="store_true", help=t("cli.solo_seguridad"))
+    ap.add_argument("--sin-dns", "--no-dns", dest="sin_dns", action="store_true", help=t("cli.sin_dns"))
     ap.add_argument("--activo", "--active", dest="activo", action="store_true", help=t("cli.activo"))
     ap.add_argument("--autorizado", "--authorized", dest="autorizado", action="store_true", help=t("cli.autorizado"))
     ap.add_argument("--umbral-cvss", "--cvss-threshold", dest="umbral_cvss", type=float, default=None, help=t("cli.umbral_cvss"))
@@ -2049,15 +2091,18 @@ def main(argv: list[str] | None = None) -> int:
         ap.error(t("seg.activo_sin_autorizacion"))
     import aimarkers_web
 
-    def progreso(texto: str) -> None:
+    def progreso(dato) -> None:
         if sys.stderr.isatty() and not args.silencioso:
-            sys.stderr.write("\r\033[K" + texto[:100])
+            if isinstance(dato, dict):
+                total = f" {dato['hecho']}/{dato['total']}" if dato.get("total") else ""
+                dato = f"{t('fase.' + dato['fase'])}{total}  {dato.get('detalle', '')}"
+            sys.stderr.write("\r\033[K" + str(dato)[:100])
             sys.stderr.flush()
 
     opciones = aimarkers_web.Opciones(
         rastrear=args.rastrear, max_paginas=args.max_paginas, max_imagenes=args.max_imagenes, retardo=max(0.0, args.retardo),
         imagenes=not args.sin_imagenes, seguridad=args.seguridad or args.solo_seguridad or args.activo, activo=args.activo,
-        autorizado=args.autorizado, solo_seguridad=args.solo_seguridad, progreso=progreso)
+        autorizado=args.autorizado, solo_seguridad=args.solo_seguridad, dns=not args.sin_dns, progreso=progreso)
     if opciones.seguridad:
         import aimarkers_seguridad  # noqa: F401 - registra sus textos para el informe
     resultados = [analizar_objetivo(o, opciones=opciones) for o in args.objetivos]

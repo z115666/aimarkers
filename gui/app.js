@@ -24,6 +24,19 @@ const TEXTOS = {
     "cap-imagen": "Credenciales C2PA, origen IPTC, EXIF y parámetros de Stable Diffusion o ComfyUI.",
     "cap-repo-t": "Repositorios y webs",
     "cap-repo": "Coautorías en commits, ramas de agentes, constructores web y cargas masivas de datos.",
+    "progreso-total": "Progreso del análisis",
+    "ver-por": "Ver por", "ver-nivel": "Nivel", "ver-ubicacion": "Fichero o página",
+    "agrupar": "Agrupar resultados", "agrupar-por": "Agrupar por", "agr-riesgo": "Riesgo", "agr-categoria": "Categoría", "agr-cid": "CID",
+    "seg-inventario": "Componentes detectados", "seg-terceros": "Servicios de terceros", "rastreador": "rastrea",
+    "sin-owasp": "Fuera de OWASP",
+    "tipo-cms": "CMS", "tipo-plugin": "Plugin", "tipo-tema": "Tema", "tipo-libreria": "Librería", "tipo-servidor": "Servidor", "tipo-lenguaje": "Lenguaje",
+    "hallazgos-n": "{n} hallazgos", "hallazgos-1": "1 hallazgo", "marcadores-n": "{n} marcadores", "marcadores-1": "1 marcador",
+    "tiempo-calculando": "Calculando el tiempo restante…", "tiempo-seg": "Quedan unos {n} s", "tiempo-min": "Quedan unos {n} min",
+    "tiempo-casi": "Casi listo", "tiempo-transcurrido": "{t} transcurridos",
+    "fase-subida": "Preparar ficheros", "fase-descarga": "Descargar la web", "fase-ia": "Marcadores de IA en las páginas",
+    "fase-imagenes": "Metadatos de las imágenes", "fase-ficheros": "Marcadores de IA en los ficheros", "fase-git": "Historial de Git",
+    "fase-scripts": "JavaScript del sitio", "fase-seguridad": "Cabeceras, cookies y contenido", "fase-dns": "Correo y DNS",
+    "fase-activo": "Rutas sensibles (modo activo)", "fase-codigo": "Seguridad del código",
     "volver-inicio": "Volver al inicio",
     "corto-fichero": "Archivo", "corto-carpeta": "Carpeta",
     "cap-seg-t": "Seguridad",
@@ -82,6 +95,7 @@ const TEXTOS = {
     "seg-celda": "Probabilidad {p}, impacto {i}: {n} hallazgos",
     "seg-informativo": "informativo",
     "seg-cid": "Afecta a: {d}",
+    "seg-probabilidad-impacto": "Probabilidad {p} de 5, impacto {i} de 5.",
     "req-H": "alta", "req-M": "media", "req-L": "baja",
     "dim-C": "Confidencialidad", "dim-I": "Integridad", "dim-D": "Disponibilidad",
     "riesgo-critico": "Crítico", "riesgo-alto": "Alto", "riesgo-medio": "Medio", "riesgo-bajo": "Bajo", "riesgo-ninguno": "Ninguno",
@@ -109,6 +123,19 @@ const TEXTOS = {
     "cap-imagen": "C2PA Content Credentials, IPTC source, EXIF and Stable Diffusion or ComfyUI parameters.",
     "cap-repo-t": "Repositories and websites",
     "cap-repo": "Commit co-authors, agent branches, website builders and bulk data loads.",
+    "progreso-total": "Analysis progress",
+    "ver-por": "View by", "ver-nivel": "Level", "ver-ubicacion": "File or page",
+    "agrupar": "Group results", "agrupar-por": "Group by", "agr-riesgo": "Risk", "agr-categoria": "Category", "agr-cid": "CIA",
+    "seg-inventario": "Detected components", "seg-terceros": "Third-party services", "rastreador": "tracks",
+    "sin-owasp": "Outside OWASP",
+    "tipo-cms": "CMS", "tipo-plugin": "Plugin", "tipo-tema": "Theme", "tipo-libreria": "Library", "tipo-servidor": "Server", "tipo-lenguaje": "Language",
+    "hallazgos-n": "{n} findings", "hallazgos-1": "1 finding", "marcadores-n": "{n} markers", "marcadores-1": "1 marker",
+    "tiempo-calculando": "Estimating time left…", "tiempo-seg": "About {n} s left", "tiempo-min": "About {n} min left",
+    "tiempo-casi": "Almost done", "tiempo-transcurrido": "{t} elapsed",
+    "fase-subida": "Prepare files", "fase-descarga": "Download the website", "fase-ia": "AI markers in pages",
+    "fase-imagenes": "Image metadata", "fase-ficheros": "AI markers in files", "fase-git": "Git history",
+    "fase-scripts": "Site JavaScript", "fase-seguridad": "Headers, cookies and content", "fase-dns": "Email and DNS",
+    "fase-activo": "Sensitive paths (active mode)", "fase-codigo": "Code security",
     "volver-inicio": "Back to start",
     "corto-fichero": "File", "corto-carpeta": "Folder",
     "cap-seg-t": "Security",
@@ -167,6 +194,7 @@ const TEXTOS = {
     "seg-celda": "Likelihood {p}, impact {i}: {n} findings",
     "seg-informativo": "informational",
     "seg-cid": "Affects: {d}",
+    "seg-probabilidad-impacto": "Likelihood {p} of 5, impact {i} of 5.",
     "req-H": "high", "req-M": "medium", "req-L": "low",
     "dim-C": "Confidentiality", "dim-I": "Integrity", "dim-D": "Availability",
     "riesgo-critico": "Critical", "riesgo-alto": "High", "riesgo-medio": "Medium", "riesgo-bajo": "Low", "riesgo-ninguno": "None",
@@ -396,6 +424,132 @@ function revelar(nodo) {
   setTimeout(avanzar, 260);
 }
 
+
+// Frases sencillas de lo que se está comprobando en cada fase
+const FRASES = {
+  es: {
+    subida: ["Preparando los ficheros para el análisis", "Copiándolos a una carpeta temporal que se borrará al terminar"],
+    descarga: ["Descargando la página", "Siguiendo los enlaces del mismo sitio", "Respetando robots.txt", "Guardando una copia temporal de cada página"],
+    ia: ["Buscando firmas de asistentes de IA", "Comprobando restos de conversación con el chat", "Midiendo muletillas típicas de los modelos",
+      "Buscando huellas de constructores web con IA", "Revisando ráfagas de datos cargados automáticamente"],
+    imagenes: ["Leyendo credenciales de contenido C2PA", "Revisando metadatos EXIF y XMP", "Buscando parámetros de Stable Diffusion o ComfyUI",
+      "Comprobando el origen digital declarado (IPTC)"],
+    ficheros: ["Buscando firmas de asistentes en el código", "Comprobando ficheros de instrucciones para agentes", "Revisando comentarios y plantillas sin rellenar",
+      "Leyendo metadatos de las imágenes"],
+    git: ["Revisando el historial de commits", "Buscando coautorías de IA", "Comprobando ramas de agentes"],
+    scripts: ["Descargando el JavaScript del sitio", "Identificando versiones de librerías", "Buscando claves expuestas en el código del cliente"],
+    seguridad: ["Comprobando las cabeceras de seguridad", "Revisando las cookies de sesión", "Verificando el certificado TLS",
+      "Buscando contenido cargado sin cifrar", "Revisando formularios y protección CSRF", "Calculando CVSS v4.0 y la matriz de riesgos"],
+    dns: ["Consultando SPF del dominio", "Comprobando la política DMARC", "Verificando DNSSEC y CAA"],
+    activo: ["Probando rutas sensibles conocidas", "Buscando copias de seguridad expuestas", "Comprobando métodos HTTP permitidos"],
+    codigo: ["Buscando secretos en el código", "Revisando patrones de inyección", "Comprobando dependencias y acciones sin fijar",
+      "Buscando criptografía débil"],
+  },
+  en: {
+    subida: ["Preparing files for analysis", "Copying them to a temporary folder deleted afterwards"],
+    descarga: ["Downloading the page", "Following links on the same site", "Respecting robots.txt", "Keeping a temporary copy of each page"],
+    ia: ["Looking for AI assistant signatures", "Checking for chat leftovers", "Measuring typical model stock phrases",
+      "Looking for AI website builder fingerprints", "Checking for bursts of automatically loaded data"],
+    imagenes: ["Reading C2PA Content Credentials", "Checking EXIF and XMP metadata", "Looking for Stable Diffusion or ComfyUI parameters",
+      "Checking the declared digital source (IPTC)"],
+    ficheros: ["Looking for assistant signatures in code", "Checking agent instruction files", "Reviewing comments and unfilled templates",
+      "Reading image metadata"],
+    git: ["Reviewing commit history", "Looking for AI co-authors", "Checking agent branches"],
+    scripts: ["Downloading the site's JavaScript", "Identifying library versions", "Looking for keys exposed in client code"],
+    seguridad: ["Checking security headers", "Reviewing session cookies", "Verifying the TLS certificate", "Looking for unencrypted content",
+      "Reviewing forms and CSRF protection", "Computing CVSS v4.0 and the risk matrix"],
+    dns: ["Querying the domain's SPF", "Checking the DMARC policy", "Verifying DNSSEC and CAA"],
+    activo: ["Trying well-known sensitive paths", "Looking for exposed backups", "Checking allowed HTTP methods"],
+    codigo: ["Looking for secrets in code", "Reviewing injection patterns", "Checking unpinned dependencies and actions", "Looking for weak cryptography"],
+  },
+};
+
+const carga = { mostrado: 0, objetivo: 0, muestras: [], eta: null, inicio: 0, fase: "", plan: [], frase: 0, totales: {} };
+let temporizadorFrase = 0;
+let temporizadorCifra = 0;
+
+function reiniciarCarga(plan = []) {
+  Object.assign(carga, { mostrado: 0, objetivo: 0, muestras: [], eta: null, inicio: performance.now(), fase: "", plan, frase: 0, totales: {} });
+  $("carga-porcentaje").textContent = "0";
+  $("carga-relleno").style.width = "0%";
+  $("carga-barra").setAttribute("aria-valuenow", "0");
+  $("carga-tiempo").textContent = t("tiempo-calculando");
+  $("progreso").textContent = "";
+  pintarPasos();
+}
+
+function pintarPasos() {
+  const lista = $("carga-pasos");
+  lista.replaceChildren();
+  const actual = carga.plan.indexOf(carga.fase);
+  carga.plan.forEach((fase, i) => {
+    const li = el("li");
+    li.dataset.estado = i < actual ? "hecho" : i === actual ? "activo" : "pendiente";
+    const cuenta = carga.totales[fase];
+    li.append(el("span", "marca-paso"), el("span", null, t("fase-" + fase)), el("span", "cuenta-paso", cuenta ? `${cuenta[0]}/${cuenta[1]}` : ""));
+    lista.append(li);
+  });
+}
+
+function rotarFrase(forzar = false) {
+  const lista = (FRASES[estado.idioma] || FRASES.en)[carga.fase];
+  if (!lista) return;
+  if (!forzar) carga.frase = (carga.frase + 1) % lista.length;
+  const nodo = $("carga-fase");
+  const texto = lista[carga.frase % lista.length];
+  if (reducirMovimiento.matches) { nodo.textContent = texto; return; }
+  nodo.classList.add("cambiando");
+  setTimeout(() => { nodo.textContent = texto; nodo.classList.remove("cambiando"); }, 220);
+}
+
+function formatoTiempo(segundos) {
+  if (segundos < 60) return `${Math.max(1, Math.round(segundos))} s`;
+  return `${Math.floor(segundos / 60)} min ${String(Math.round(segundos % 60)).padStart(2, "0")} s`;
+}
+
+function actualizarCarga(dato) {
+  if (!dato || !dato.fase) return;
+  if (dato.plan && dato.plan.join() !== carga.plan.join()) carga.plan = dato.plan;
+  if (dato.total) carga.totales[dato.fase] = [Math.min(dato.hecho, dato.total), dato.total];
+  if (dato.fase !== carga.fase) {
+    if (carga.fase && carga.totales[carga.fase]) carga.totales[carga.fase][0] = carga.totales[carga.fase][1];
+    carga.fase = dato.fase;
+    carga.frase = 0;
+    rotarFrase(true);
+  }
+  pintarPasos();
+  if (dato.detalle) $("progreso").textContent = dato.detalle;
+  carga.objetivo = Math.max(carga.objetivo, Number(dato.porcentaje) || 0);
+  // Tiempo restante: velocidad media de los últimos 15 s
+  const ahora = performance.now();
+  carga.muestras.push([ahora, carga.objetivo]);
+  carga.muestras = carga.muestras.filter(([m]) => ahora - m < 15000);
+  const [t0, p0] = carga.muestras[0];
+  const transcurrido = (ahora - carga.inicio) / 1000;
+  let texto = t("tiempo-calculando");
+  if (carga.objetivo >= 97) texto = t("tiempo-casi");
+  else if (carga.objetivo > 2 && transcurrido > 3 && ahora - t0 > 2000 && carga.objetivo > p0) {
+    const restante = (100 - carga.objetivo) / ((carga.objetivo - p0) / ((ahora - t0) / 1000));
+    carga.eta = carga.eta === null ? restante : carga.eta * 0.7 + restante * 0.3;
+    texto = carga.eta < 60 ? t("tiempo-seg", { n: Math.max(1, Math.round(carga.eta / 5) * 5 || 1) })
+      : t("tiempo-min", { n: Math.round(carga.eta / 60) });
+  }
+  $("carga-tiempo").textContent = `${texto} (${t("tiempo-transcurrido", { t: formatoTiempo(transcurrido) })})`;
+}
+
+function animarCifra() {
+  clearInterval(temporizadorCifra);
+  temporizadorCifra = setInterval(() => {
+    if (!estado.ocupado) return;
+    const diferencia = carga.objetivo - carga.mostrado;
+    carga.mostrado += Math.abs(diferencia) < 0.5 ? diferencia : diferencia * 0.18;
+    const valor = Math.floor(carga.mostrado);
+    $("carga-porcentaje").textContent = String(valor);
+    $("carga-relleno").style.width = carga.mostrado.toFixed(1) + "%";
+    $("carga-barra").setAttribute("aria-valuenow", String(valor));
+  }, 60);
+}
+
 let temporizadorLatido = 0;
 function latido(activo) {
   const nodo = $("texto-analizando");
@@ -411,11 +565,20 @@ function latido(activo) {
   }, 180);
 }
 
-function ocupado(activo, progreso = "") {
+function ocupado(activo, plan = null) {
   estado.ocupado = activo;
   $("analizar").disabled = activo;
-  $("progreso").textContent = progreso;
-  if (activo) { mostrar("analizando"); latido(true); } else latido(false);
+  clearInterval(temporizadorFrase);
+  if (activo) {
+    if (plan) reiniciarCarga(plan);
+    mostrar("analizando");
+    latido(true);
+    animarCifra();
+    temporizadorFrase = setInterval(() => rotarFrase(), 2600);
+  } else {
+    latido(false);
+    clearInterval(temporizadorCifra);
+  }
 }
 
 // ---------- Resultado ----------
@@ -479,6 +642,10 @@ function pintarResultado(caso) {
     grupos.append(seccion);
   }
   $("r-vacio").hidden = soloSeg || r.grupos.length > 0;
+  const variasUbicaciones = (r.por_ubicacion || []).length > 1;
+  $("r-segmentos").hidden = soloSeg || !variasUbicaciones;
+  pintarUbicaciones(r);
+  cambiarVistaIa(variasUbicaciones ? (estado.vistaIa || "nivel") : "nivel");
   pintarSeguridad(r.seguridad);
 
   const notas = $("r-notas");
@@ -562,55 +729,181 @@ function pintarSeguridad(seg) {
   for (let i = 1; i <= 5; i++) pie.append(el("span", "eje", String(i)));
   matriz.append(pie);
 
+  estado.seguridad = seg;
+  pintarCategorias(seg);
+  pintarGruposSeguridad(seg);
+  pintarAnexos(seg);
+  $("seg-vacio").hidden = seg.hallazgos.length > 0;
+}
+
+const NIVELES_RIESGO = ["critico", "alto", "medio", "bajo"];
+
+function pintarCategorias(seg) {
+  const caja = $("seg-categorias");
+  caja.replaceChildren();
+  caja.hidden = seg.categorias.length < 2;
+  for (const c of seg.categorias) {
+    const boton = el("button", "cat-tarjeta");
+    boton.type = "button";
+    boton.dataset.riesgo = c.peor;
+    boton.setAttribute("aria-pressed", String(estado.agrupar === "categoria" && estado.categoriaFoco === c.id));
+    const cabecera = el("span", "cat-cabecera");
+    cabecera.append(el("span", "cat-nombre", c.nombre), el("span", "cat-total", String(c.total)));
+    const barra = el("span", "cat-barra");
+    for (const n of NIVELES_RIESGO) {
+      if (!c.por_nivel[n]) continue;
+      const tramo = el("i");
+      tramo.dataset.riesgo = n;
+      tramo.style.flex = String(c.por_nivel[n]);
+      tramo.title = `${t("riesgo-" + n)}: ${c.por_nivel[n]}`;
+      barra.append(tramo);
+    }
+    const pie = el("span", "cat-pie", NIVELES_RIESGO.filter((n) => c.por_nivel[n]).map((n) => `${c.por_nivel[n]} ${t("riesgo-" + n).toLowerCase()}`).join(", "));
+    boton.append(cabecera, barra, pie);
+    boton.addEventListener("click", () => {
+      estado.categoriaFoco = c.id;
+      cambiarAgrupacion("categoria");
+      const destino = document.querySelector(`#seg-grupos [data-grupo="${c.id}"]`);
+      if (destino) destino.scrollIntoView({ behavior: reducirMovimiento.matches ? "auto" : "smooth", block: "start" });
+    });
+    caja.append(boton);
+  }
+}
+
+function cambiarAgrupacion(modo) {
+  estado.agrupar = modo;
+  guardar("agrupar", modo);
+  document.querySelectorAll("[data-agrupar]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.agrupar === modo)));
+  if (estado.seguridad) { pintarCategorias(estado.seguridad); pintarGruposSeguridad(estado.seguridad); }
+}
+
+function gruposPor(seg, modo) {
+  if (modo === "categoria") {
+    return seg.categorias.map((c) => ({ clave: c.id, titulo: c.nombre, nivel: c.peor, lista: seg.hallazgos.filter((h) => h.categoria === c.id) }));
+  }
+  if (modo === "owasp") {
+    const claves = [...new Set(seg.hallazgos.map((h) => h.owasp || "—"))].sort((a, b) => (a === "—") - (b === "—") || a.localeCompare(b));
+    return claves.map((k) => {
+      const lista = seg.hallazgos.filter((h) => (h.owasp || "—") === k);
+      const nombre = k === "—" ? t("sin-owasp") : `${k} ${lista[0].owasp_nombre}`;
+      return { clave: k, titulo: nombre, nivel: NIVELES_RIESGO.find((n) => lista.some((h) => h.nivel_riesgo === n)) || "bajo", lista };
+    });
+  }
+  if (modo === "cid") {
+    return ["C", "I", "D"].map((d) => {
+      const lista = seg.hallazgos.filter((h) => h.cid[d] !== "N");
+      return { clave: d, titulo: t("dim-" + d), nivel: seg.triada[d].nivel === "ninguno" ? "bajo" : seg.triada[d].nivel, lista };
+    }).filter((g) => g.lista.length);
+  }
+  return NIVELES_RIESGO.map((n) => ({ clave: n, titulo: t("riesgo-" + n), nivel: n, lista: seg.hallazgos.filter((h) => h.nivel_riesgo === n) }))
+    .filter((g) => g.lista.length);
+}
+
+function fichaHallazgo(h, abierta) {
+  const item = el("li");
+  const detalle = el("details", "marcador");
+  const resumen = el("summary");
+  const chip = el("span", "seg-cvss-chip");
+  chip.dataset.sev = h.severidad;
+  if (h.cvss === null) chip.textContent = t("seg-informativo");
+  else chip.append("CVSS ", el("b", null, numero(h.cvss)));
+  const riesgo = el("span", "marcador-veces", `${t("riesgo-" + h.nivel_riesgo)} ${h.riesgo}`);
+  riesgo.dataset.riesgo = h.nivel_riesgo;
+  riesgo.style.color = "var(--r)";
+  resumen.append(el("span", "marcador-desc", h.titulo), riesgo, chip);
+  const cuerpo = el("div", "seg-detalle");
+  cuerpo.append(el("p", null, h.descripcion));
+  const refs = el("p", "seg-refs");
+  if (h.owasp) refs.append(enlace(`OWASP ${h.owasp}`, "https://owasp.org/Top10/2025/", h.owasp_nombre));
+  refs.append(el("span", "seg-cat", h.categoria_nombre));
+  for (const c of h.cwe) refs.append(enlace(c, `https://cwe.mitre.org/data/definitions/${c.slice(4)}.html`));
+  for (const m of h.mitre) refs.append(enlace(m.id, `https://attack.mitre.org/techniques/${m.id.replace(".", "/")}/`, m.nombre));
+  for (const c of h.cve) refs.append(enlace(c, `https://www.cve.org/CVERecord?id=${c}`));
+  cuerpo.append(refs);
+  const afectadas = ["C", "I", "D"].filter((d) => h.cid[d] !== "N").map((d) => `${t("dim-" + d)} (${h.cid[d]})`);
+  const lineaCid = afectadas.length ? t("seg-cid", { d: afectadas.join(", ") }) + ". " : "";
+  cuerpo.append(el("p", null, `${lineaCid}${t("seg-probabilidad-impacto", { p: h.probabilidad, i: h.impacto })}`));
+  if (h.vector) cuerpo.append(el("p", "seg-vector", h.vector));
+  const evid = el("ul", "evidencias");
+  for (const e of h.evidencias.slice(0, 8)) {
+    const fila = el("li", "evidencia");
+    fila.append(el("code", null, e.ubicacion), el("span", null, e.extracto));
+    evid.append(fila);
+  }
+  cuerpo.append(evid);
+  const rec = el("p", "seg-recomendacion");
+  rec.append(el("strong", null, t("seg-recomendacion") + ": "), h.recomendacion);
+  cuerpo.append(rec);
+  detalle.append(resumen, cuerpo);
+  detalle.open = abierta;
+  item.append(detalle);
+  return item;
+}
+
+function pintarGruposSeguridad(seg) {
   const grupos = $("seg-grupos");
   grupos.replaceChildren();
-  for (const nivel of ORDEN_RIESGO) {
-    const lista = seg.hallazgos.filter((h) => h.nivel_riesgo === nivel);
-    if (!lista.length) continue;
+  const modo = ["riesgo", "categoria", "owasp", "cid"].includes(estado.agrupar) ? estado.agrupar : "riesgo";
+  for (const g of gruposPor(seg, modo)) {
+    if (!g.lista.length) continue;
     const seccion = el("section", "grupo");
-    seccion.dataset.nivel = nivel;
+    seccion.dataset.nivel = g.nivel;
+    seccion.dataset.grupo = g.clave;
     const titulo = el("h2");
-    titulo.append(el("span", "punto"), el("span", null, t("riesgo-" + nivel)), el("small", null, String(lista.length)));
+    titulo.append(el("span", "punto"), el("span", null, g.titulo),
+      el("small", null, t(g.lista.length === 1 ? "hallazgos-1" : "hallazgos-n", { n: g.lista.length })));
     const ul = el("ul");
-    for (const h of lista) {
-      const item = el("li");
-      const detalle = el("details", "marcador");
-      const resumen = el("summary");
-      const chip = el("span", "seg-cvss-chip");
-      chip.dataset.sev = h.severidad;
-      if (h.cvss === null) chip.textContent = t("seg-informativo");
-      else chip.append("CVSS ", el("b", null, numero(h.cvss)));
-      resumen.append(el("span", "marcador-desc", h.titulo), el("span", "marcador-veces", `P${h.probabilidad}×I${h.impacto}`), chip);
-      const cuerpo = el("div", "seg-detalle");
-      cuerpo.append(el("p", null, h.descripcion));
-      const refs = el("p", "seg-refs");
-      refs.append(enlace(`OWASP ${h.owasp}`, "https://owasp.org/Top10/2025/", h.owasp_nombre));
-      for (const c of h.cwe) refs.append(enlace(c, `https://cwe.mitre.org/data/definitions/${c.slice(4)}.html`));
-      for (const m of h.mitre) refs.append(enlace(m.id, `https://attack.mitre.org/techniques/${m.id.replace(".", "/")}/`, m.nombre));
-      for (const c of h.cve) refs.append(enlace(c, `https://www.cve.org/CVERecord?id=${c}`));
-      cuerpo.append(refs);
-      const afectadas = ["C", "I", "D"].filter((d) => h.cid[d] !== "N").map((d) => `${t("dim-" + d)} (${h.cid[d]})`);
-      if (afectadas.length) cuerpo.append(el("p", null, t("seg-cid", { d: afectadas.join(", ") })));
-      if (h.vector) cuerpo.append(el("p", "seg-vector", h.vector));
-      const evid = el("ul", "evidencias");
-      for (const e of h.evidencias.slice(0, 8)) {
-        const fila = el("li", "evidencia");
-        fila.append(el("code", null, e.ubicacion), el("span", null, e.extracto));
-        evid.append(fila);
-      }
-      cuerpo.append(evid);
-      const rec = el("p", "seg-recomendacion");
-      rec.append(el("strong", null, t("seg-recomendacion") + ": "), h.recomendacion);
-      cuerpo.append(rec);
-      detalle.append(resumen, cuerpo);
-      if (nivel === "critico") detalle.open = true;
-      item.append(detalle);
-      ul.append(item);
-    }
+    for (const h of g.lista) ul.append(fichaHallazgo(h, h.nivel_riesgo === "critico"));
     seccion.append(titulo, ul);
     grupos.append(seccion);
   }
-  $("seg-vacio").hidden = seg.hallazgos.length > 0;
+}
+
+function pintarAnexos(seg) {
+  const inventario = $("seg-inventario");
+  inventario.replaceChildren();
+  for (const c of seg.inventario || []) {
+    const fila = el("tr");
+    fila.append(el("td", null, t("tipo-" + c.tipo)), el("td", null, c.nombre), el("td", "version", c.version || ""));
+    inventario.append(fila);
+  }
+  $("seg-inventario-bloque").hidden = !(seg.inventario || []).length;
+  const terceros = $("seg-terceros");
+  terceros.replaceChildren();
+  for (const x of seg.terceros || []) {
+    const fila = el("tr");
+    const nombre = el("td");
+    nombre.append(el("span", null, x.nombre + " "), el("code", null, x.host));
+    fila.append(el("td", null, x.tipo_nombre), nombre, el("td", "rastreador", x.rastreador ? t("rastreador") : ""));
+    terceros.append(fila);
+  }
+  $("seg-terceros-bloque").hidden = !(seg.terceros || []).length;
+}
+
+function pintarUbicaciones(r) {
+  const lista = $("r-ubicaciones");
+  lista.replaceChildren();
+  const maximo = Math.max(1, ...(r.por_ubicacion || []).map((u) => u.peso));
+  for (const u of r.por_ubicacion || []) {
+    const li = el("li");
+    li.dataset.nivel = u.peor;
+    const medidor = el("span", "medidor");
+    const relleno = el("i");
+    relleno.style.setProperty("--w", Math.round((u.peso / maximo) * 100) + "%");
+    medidor.append(relleno);
+    li.append(el("code", null, u.ubicacion), medidor, el("span", "cuenta", t(u.veces === 1 ? "marcadores-1" : "marcadores-n", { n: u.veces })));
+    li.title = u.ubicacion;
+    lista.append(li);
+  }
+}
+
+function cambiarVistaIa(modo) {
+  estado.vistaIa = modo;
+  document.querySelectorAll("[data-vista-ia]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.vistaIa === modo)));
+  const r = estado.actual?.resultados[0];
+  const soloSeg = Boolean(r?.solo_seguridad && r?.seguridad);
+  $("r-grupos").hidden = soloSeg || modo === "ubicacion";
+  $("r-ubicaciones").hidden = soloSeg || modo !== "ubicacion";
 }
 
 function pintarCasos() {
@@ -680,15 +973,15 @@ function seguirProgreso(activo) {
   if (!activo) return;
   temporizadorProgreso = setInterval(async () => {
     try {
-      const { texto } = await api("/api/progress");
-      if (texto && estado.ocupado) $("progreso").textContent = texto;
+      const dato = await api("/api/progress");
+      if (estado.ocupado) actualizarCarga(dato);
     } catch (_) { /* el análisis sigue; se reintenta */ }
-  }, 900);
+  }, 700);
 }
 
 async function analizar(peticion, casoExistente = null) {
   if (estado.ocupado || !opcionesValidas()) return;
-  ocupado(true);
+  ocupado(true, peticion.lote && carga.plan.includes("subida") ? null : []);
   seguirProgreso(true);
   try {
     const datos = await api("/api/analyze", { ...peticion, ...opcionesActuales(), idioma: estado.idioma });
@@ -721,8 +1014,8 @@ function nuevoLote() {
 async function subirYAnalizar(ficheros, nombre) {
   if (!ficheros.length || estado.ocupado || !opcionesValidas()) return;
   const lote = nuevoLote();
-  ocupado(true, t("subiendo", { a: 0, b: ficheros.length }));
-  estado.ocupado = true;
+  ocupado(true, ["subida"]);
+  actualizarCarga({ fase: "subida", hecho: 0, total: ficheros.length, porcentaje: 0 });
   let hechos = 0;
   try {
     const cola = [...ficheros];
@@ -732,7 +1025,8 @@ async function subirYAnalizar(ficheros, nombre) {
         await api(`/api/upload?batch=${lote}&path=${encodeURIComponent(ruta)}`, fichero,
           { crudo: true, tipo: "application/octet-stream" });
         hechos += 1;
-        $("progreso").textContent = t("subiendo", { a: hechos, b: ficheros.length });
+        actualizarCarga({ fase: "subida", hecho: hechos, total: ficheros.length, detalle: ruta,
+          porcentaje: Math.round((hechos / ficheros.length) * 100) });
       }
     };
     await Promise.all(Array.from({ length: Math.min(4, ficheros.length) }, trabajador));
@@ -743,6 +1037,9 @@ async function subirYAnalizar(ficheros, nombre) {
     return;
   }
   estado.ocupado = false;
+  carga.objetivo = 0;
+  carga.mostrado = 0;
+  carga.plan = [];
   await analizar({ lote, nombre });
 }
 
@@ -850,6 +1147,12 @@ function conectar() {
     revelar($("titular-inicio"));
   });
 
+  document.querySelectorAll("[data-agrupar]").forEach((b) => b.addEventListener("click", () => {
+    estado.categoriaFoco = null;
+    cambiarAgrupacion(b.dataset.agrupar);
+  }));
+  document.querySelectorAll("[data-vista-ia]").forEach((b) => b.addEventListener("click", () => cambiarVistaIa(b.dataset.vistaIa)));
+
   $("tema").addEventListener("click", () => {
     estado.tema = { auto: "dark", dark: "light", light: "auto" }[estado.tema];
     guardar("tema", estado.tema);
@@ -892,6 +1195,8 @@ async function iniciar() {
   const idiomaGuardado = leer("idioma");
   estado.idioma = ["es", "en"].includes(idiomaGuardado) ? idiomaGuardado
     : ((navigator.language || "").toLowerCase().startsWith("es") ? "es" : "en");
+  estado.agrupar = ["riesgo", "categoria", "owasp", "cid"].includes(leer("agrupar")) ? leer("agrupar") : "riesgo";
+  document.querySelectorAll("[data-agrupar]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.agrupar === estado.agrupar)));
   conectar();
   construirIlustracion();
   animarIlustracion("deriva");

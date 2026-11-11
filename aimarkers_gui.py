@@ -71,7 +71,8 @@ class Estado:
         self.resultados: dict[str, list] = {}
         self.cerrojo = threading.Lock()
         self.puerto = 0
-        self.progreso = ""
+        self.progreso: dict = {}
+        self.plan: list[tuple[str, float]] = []
         self.idioma_forzado = False
 
     def limpiar(self) -> None:
@@ -147,6 +148,15 @@ def resultado_para_interfaz(res: aimarkers.Resultado, nombre: str | None = None)
     datos["tipo_nombre"] = aimarkers.t("tipo." + res.tipo)
     datos["valoracion"] = res.banda()
     datos["solo_seguridad"] = res.solo_seguridad
+    ubicaciones: dict[str, dict] = {}
+    for h in res.hallazgos:
+        clave = h.ubicacion.rsplit(":", 1)[0] if re.search(r":\d+$", h.ubicacion) else h.ubicacion
+        dato = ubicaciones.setdefault(clave, {"ubicacion": clave, "veces": 0, "peso": 0, "peor": "debil"})
+        dato["veces"] += 1
+        dato["peso"] += h.peso
+        if aimarkers.ORDEN_NIVEL.index(h.nivel) < aimarkers.ORDEN_NIVEL.index(dato["peor"]):
+            dato["peor"] = h.nivel
+    datos["por_ubicacion"] = sorted(ubicaciones.values(), key=lambda x: (-x["peso"], x["ubicacion"]))[:40]
     return datos
 
 
@@ -220,7 +230,7 @@ class Manejador(BaseHTTPRequestHandler):
         if ruta == "/api/progress":
             if not self._autorizado():
                 return self._error(HTTPStatus.FORBIDDEN, "token")
-            return self._json({"texto": ESTADO.progreso})
+            return self._json(ESTADO.progreso or {"fase": "", "porcentaje": 0})
         if ruta == "/api/config":
             if not self._autorizado():
                 return self._error(HTTPStatus.FORBIDDEN, "token")
@@ -312,11 +322,14 @@ class Manejador(BaseHTTPRequestHandler):
             return self._error(HTTPStatus.BAD_REQUEST, "target")
         with ESTADO.cerrojo:  # el idioma es global en aimarkers: un análisis cada vez
             aimarkers.fijar_idioma(idioma)
-            ESTADO.progreso = ""
+            es_url = bool(re.match(r"https?://", objetivos[0][0], re.I))
+            ESTADO.plan = plan_fases(es_url, opciones)
+            ESTADO.progreso = {"fase": ESTADO.plan[0][0], "hecho": 0, "total": 0, "detalle": "", "porcentaje": 0.0,
+                               "plan": [f for f, _ in ESTADO.plan]}
             try:
                 resultados = [(aimarkers.analizar_objetivo(o, opciones=opciones), n) for o, n in objetivos]
             finally:
-                ESTADO.progreso = ""
+                ESTADO.progreso = {}
             for res, nombre in resultados:
                 if nombre:
                     res.objetivo = nombre
@@ -346,8 +359,37 @@ class Manejador(BaseHTTPRequestHandler):
         return self._enviar(200, cuerpo.encode("utf-8"), tipo, {"Content-Disposition": f'attachment; filename="{nombre}"'})
 
 
-def _avance(texto: str) -> None:
-    ESTADO.progreso = str(texto)[:200]
+def plan_fases(es_url: bool, op) -> list[tuple[str, float]]:
+    """Fases previstas y su peso aproximado en el tiempo total, para calcular el porcentaje."""
+    ia = not op.solo_seguridad
+    if es_url:
+        fases = [("descarga", 40 if op.rastrear else 12), ("ia", 8 if ia else 0), ("imagenes", 25 if ia and op.imagenes else 0),
+                 ("scripts", 10 if op.seguridad else 0), ("seguridad", 10 if op.seguridad else 0),
+                 ("dns", 6 if op.seguridad and op.dns else 0), ("activo", 20 if op.activo and op.autorizado else 0)]
+    else:
+        fases = [("ficheros", 60 if ia else 0), ("git", 15 if ia else 0), ("codigo", 30 if op.seguridad else 0)]
+    fases = [(f, w) for f, w in fases if w]
+    total = sum(w for _, w in fases) or 1
+    return [(f, w / total) for f, w in fases]
+
+
+def _avance(dato) -> None:
+    if not isinstance(dato, dict) or not ESTADO.plan:
+        return
+    fases = [f for f, _ in ESTADO.plan]
+    fase = dato.get("fase", "")
+    anterior = ESTADO.progreso.get("porcentaje", 0.0) if ESTADO.progreso else 0.0
+    if fase in fases:
+        indice = fases.index(fase)
+        hecho_antes = sum(w for _, w in ESTADO.plan[:indice])
+        total = max(1, int(dato.get("total") or 0))
+        fraccion = min(1.0, int(dato.get("hecho") or 0) / total) if dato.get("total") else 0.0
+        porcentaje = 100 * (hecho_antes + ESTADO.plan[indice][1] * fraccion)
+    else:
+        porcentaje = anterior
+    ESTADO.progreso = {"fase": fase, "hecho": int(dato.get("hecho") or 0), "total": int(dato.get("total") or 0),
+                       "detalle": str(dato.get("detalle", ""))[:160], "porcentaje": round(max(anterior, min(99.0, porcentaje)), 1),
+                       "plan": fases}
 
 
 def _entero(valor, por_defecto: int, minimo: int, maximo: int) -> int:

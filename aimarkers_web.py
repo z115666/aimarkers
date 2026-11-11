@@ -165,6 +165,7 @@ class Opciones:
     autorizado: bool = False
     ignorar_robots: bool = False
     solo_seguridad: bool = False
+    dns: bool = True
     max_total: int = MAX_TOTAL_POR_DEFECTO
     progreso: object = None          # función(texto) para informar del avance
 
@@ -194,9 +195,6 @@ class Rastreo:
     def cerrar(self) -> None:
         shutil.rmtree(self.carpeta, ignore_errors=True)
 
-    def _avisar(self, texto: str) -> None:
-        if callable(self.op.progreso):
-            self.op.progreso(texto)
 
     def _guardar(self, pagina: Pagina, nombre: str) -> None:
         pagina.ruta = self.carpeta / nombre
@@ -229,6 +227,7 @@ class Rastreo:
         return self.op.max_paginas or MAX_PAGINAS_RASTREO
 
     def ejecutar(self) -> None:
+        aimarkers.informar("descarga", 0, 1, self.inicio)
         primera, error = obtener(self.inicio)
         if primera is None:
             self.error = error
@@ -259,7 +258,7 @@ class Rastreo:
                 continue
             self._guardar(pagina, f"p{len(self.paginas)}.html")
             self.paginas.append(pagina)
-            self._avisar(aimarkers.t("prog.paginas", n=len(self.paginas)))
+            aimarkers.informar("descarga", len(self.paginas), min(limite, len(self.paginas) + len(cola)), pagina.url)
             if not RE_META_ROBOTS.search(pagina.texto()[:20000]) or self.op.ignorar_robots:
                 cola.extend(self._enlaces(pagina, pagina.url, vistas))
         if self.limite_alcanzado:
@@ -292,12 +291,12 @@ class Rastreo:
                     urls.append(url)
         descargados = []
         for i, url in enumerate(urls[:maximo]):
+            aimarkers.informar("scripts", i, min(len(urls), maximo), url)
             time.sleep(max(0.0, self.op.retardo) / 2)
             js, _ = obtener(url, maximo=3_000_000)
             if js and js.estado == 200:
                 self._guardar(js, f"s{i}.js")
                 descargados.append(js)
-                self._avisar(aimarkers.t("prog.scripts", n=len(descargados)))
         self.recursos.extend(descargados)
         return descargados
 

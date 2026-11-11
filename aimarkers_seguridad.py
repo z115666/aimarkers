@@ -69,6 +69,9 @@ MITRE = {
     "T1552.004": "Unsecured Credentials: Private Keys",
     "T1557": "Adversary-in-the-Middle",
     "T1565": "Data Manipulation",
+    "T1566": "Phishing",
+    "T1588.004": "Obtain Capabilities: Digital Certificates",
+    "T1656": "Impersonation",
     "T1589.002": "Gather Victim Identity Information: Email Addresses",
     "T1592.002": "Gather Victim Host Information: Software",
     "T1594": "Search Victim-Owned Websites",
@@ -128,6 +131,32 @@ TEXTOS = {
     "req.H": ("Alta", "High"),
     "req.M": ("Media", "Medium"),
     "req.L": ("Baja", "Low"),
+    "seg.categorias": ("Por categoría", "By category"),
+    "seg.inventario": ("Componentes detectados", "Detected components"),
+    "seg.terceros": ("Servicios de terceros", "Third-party services"),
+    "seg.dns_no": ("No se ha podido consultar el DNS del dominio ({e}).", "The domain's DNS could not be queried ({e})."),
+    "seg.dns_proveedor": ("DNS consultado por HTTPS a {p}: solo se envía el nombre del dominio.",
+                          "DNS queried over HTTPS via {p}: only the domain name is sent."),
+    "cat.transporte": ("Transporte y cifrado", "Transport and encryption"),
+    "cat.cabeceras": ("Cabeceras y configuración del servidor", "Headers and server configuration"),
+    "cat.sesion": ("Sesión y autenticación", "Session and authentication"),
+    "cat.contenido": ("Contenido de las páginas", "Page content"),
+    "cat.componentes": ("Componentes y cadena de suministro", "Components and supply chain"),
+    "cat.exposicion": ("Exposición de información", "Information exposure"),
+    "cat.dns": ("Correo y DNS", "Email and DNS"),
+    "cat.privacidad": ("Privacidad y terceros", "Privacy and third parties"),
+    "cat.codigo": ("Código", "Code"),
+    "comp.cms": ("CMS", "CMS"), "comp.plugin": ("Plugin", "Plugin"), "comp.tema": ("Tema", "Theme"),
+    "comp.libreria": ("Librería", "Library"), "comp.servidor": ("Servidor", "Server"), "comp.lenguaje": ("Lenguaje", "Language"),
+    "tercero.analitica": ("Analítica", "Analytics"),
+    "tercero.publicidad": ("Publicidad y redes sociales", "Advertising and social networks"),
+    "tercero.video": ("Vídeo", "Video"),
+    "tercero.fuentes": ("Fuentes tipográficas", "Web fonts"),
+    "tercero.mapas": ("Mapas", "Maps"),
+    "tercero.cdn": ("CDN y librerías", "CDN and libraries"),
+    "tercero.consentimiento": ("Gestión del consentimiento", "Consent management"),
+    "tercero.seguridad": ("Seguridad y antibots", "Security and anti-bot"),
+    "tercero.otros": ("Otros", "Other"),
     "prog.seguridad": ("Analizando la seguridad…", "Analysing security…"),
     "prog.activo": ("Comprobando rutas sensibles ({n})…", "Checking sensitive paths ({n})…"),
 }
@@ -375,6 +404,86 @@ CATALOGO = {
          "robots.txt is public: listing admin or backup paths there reveals them to anyone."),
         ("Protege esas rutas con autenticación en lugar de ocultarlas.", "Protect those paths with authentication instead of hiding them."),
         "A01", [200], ["T1594"], info=True),
+    "sin-coop": _c(
+        ("Falta Cross-Origin-Opener-Policy", "Missing Cross-Origin-Opener-Policy"),
+        ("Sin COOP, las ventanas abiertas desde otros sitios conservan una referencia a la tuya (ataques XS-Leaks).",
+         "Without COOP, windows opened from other sites keep a reference to yours (XS-Leaks attacks)."),
+        ("Envía «Cross-Origin-Opener-Policy: same-origin» si la web no depende de ventanas emergentes de terceros.",
+         "Send «Cross-Origin-Opener-Policy: same-origin» if the site does not rely on third-party pop-ups."),
+        "A02", [1021], [], info=True),
+    "tabnabbing": _c(
+        ("Enlaces externos con target=_blank sin rel=noopener", "External links with target=_blank and no rel=noopener"),
+        ("En navegadores antiguos, la página enlazada puede redirigir la tuya a otra de phishing (reverse tabnabbing).",
+         "In older browsers, the linked page can redirect yours to a phishing page (reverse tabnabbing)."),
+        ("Añade rel=\"noopener noreferrer\" a los enlaces externos que abren pestaña nueva.",
+         "Add rel=\"noopener noreferrer\" to external links that open a new tab."),
+        "A01", [1022], ["T1204.001"], info=True),
+    # --- Correo y DNS -----------------------------------------------------------
+    "spf-ausente": _c(
+        ("El dominio no publica SPF", "The domain publishes no SPF record"),
+        ("Cualquiera puede enviar correos que parecen salir de tu dominio; facilita el phishing a familias, alumnos y personal.",
+         "Anyone can send emails that appear to come from your domain; it makes phishing against your users easier."),
+        ("Publica un registro TXT «v=spf1 … -all» con tus servidores de correo (o «v=spf1 -all» si el dominio no envía correo).",
+         "Publish a TXT record «v=spf1 … -all» listing your mail servers (or «v=spf1 -all» if the domain sends no email)."),
+        "A02", [290], ["T1566", "T1656"], "AV:N/AC:L/AT:N/PR:N/UI:A/VC:N/VI:L/VA:N/SC:L/SI:L/SA:N", e="A"),
+    "spf-permisivo": _c(
+        ("SPF demasiado permisivo o mal formado", "SPF too permissive or malformed"),
+        ("«+all», «?all» o varios registros SPF equivalen en la práctica a no tener SPF.",
+         "«+all», «?all» or several SPF records are in practice the same as having no SPF."),
+        ("Deja un único registro SPF que termine en «-all» (o «~all» mientras pruebas).",
+         "Keep a single SPF record ending in «-all» (or «~all» while testing)."),
+        "A02", [290], ["T1566", "T1656"], "AV:N/AC:L/AT:N/PR:N/UI:A/VC:N/VI:L/VA:N/SC:L/SI:L/SA:N", e="A"),
+    "dmarc-ausente": _c(
+        ("El dominio no publica DMARC", "The domain publishes no DMARC record"),
+        ("Sin DMARC, los servidores de destino no saben qué hacer con correos que suplantan tu dominio y no recibes informes.",
+         "Without DMARC, receiving servers do not know what to do with emails spoofing your domain, and you get no reports."),
+        ("Publica «_dmarc» con «v=DMARC1; p=quarantine; rua=mailto:…» y endurécelo a p=reject cuando revises los informes.",
+         "Publish «_dmarc» with «v=DMARC1; p=quarantine; rua=mailto:…» and move to p=reject after reviewing reports."),
+        "A02", [290], ["T1566", "T1656"], "AV:N/AC:L/AT:N/PR:N/UI:A/VC:N/VI:L/VA:N/SC:L/SI:L/SA:N", e="A"),
+    "dmarc-sin-politica": _c(
+        ("DMARC en modo solo observación (p=none)", "DMARC in monitoring-only mode (p=none)"),
+        ("Con p=none se reciben informes, pero los correos suplantados siguen llegando a las bandejas de entrada.",
+         "With p=none you get reports, but spoofed emails still reach inboxes."),
+        ("Cuando los informes estén limpios, cambia a p=quarantine y después a p=reject.",
+         "Once reports are clean, move to p=quarantine and then to p=reject."),
+        "A02", [290], ["T1566", "T1656"], "AV:N/AC:L/AT:P/PR:N/UI:A/VC:N/VI:L/VA:N/SC:L/SI:L/SA:N", e="A"),
+    "dnssec-ausente": _c(
+        ("DNSSEC no está activado", "DNSSEC is not enabled"),
+        ("Las respuestas DNS del dominio no van firmadas y un atacante en la red podría falsificarlas.",
+         "The domain's DNS answers are not signed and a network attacker could forge them."),
+        ("Activa DNSSEC en el proveedor de DNS y publica el registro DS en el registrador.",
+         "Enable DNSSEC at the DNS provider and publish the DS record at the registrar."),
+        "A04", [350], ["T1557"], "AV:N/AC:H/AT:P/PR:N/UI:N/VC:L/VI:L/VA:N/SC:N/SI:N/SA:N"),
+    "caa-ausente": _c(
+        ("Sin registro CAA", "No CAA record"),
+        ("Cualquier autoridad de certificación puede emitir certificados para el dominio.",
+         "Any certificate authority can issue certificates for the domain."),
+        ("Publica registros CAA con las autoridades que usas (p. ej. «0 issue \"letsencrypt.org\"»).",
+         "Publish CAA records for the authorities you use (e.g. «0 issue \"letsencrypt.org\"»)."),
+        "A02", [295], ["T1588.004"], info=True),
+    # --- Privacidad ---------------------------------------------------------------
+    "rastreadores-terceros": _c(
+        ("Analítica o publicidad de terceros", "Third-party analytics or advertising"),
+        ("Estos servicios reciben datos de los visitantes (IP, navegación, identificadores). En una web con menores o datos "
+         "personales debe cargarse solo tras el consentimiento (RGPD, LOPDGDD, LSSI).",
+         "These services receive visitor data (IP, browsing, identifiers). On a site with minors or personal data they must only "
+         "load after consent (GDPR, ePrivacy)."),
+        ("Comprueba que no se cargan antes de aceptar el banner de cookies y revisa los contratos de encargo de tratamiento.",
+         "Check that they do not load before the cookie banner is accepted and review the data processing agreements."),
+        None, [359], [], info=True),
+    "fuentes-google": _c(
+        ("Fuentes cargadas desde Google Fonts", "Fonts loaded from Google Fonts"),
+        ("Cada visita envía la IP del usuario a Google; un tribunal alemán lo consideró contrario al RGPD (LG München, 2022).",
+         "Every visit sends the user's IP to Google; a German court found it contrary to the GDPR (LG München, 2022)."),
+        ("Aloja las fuentes en tu propio servidor.", "Self-host the fonts."),
+        None, [359], [], info=True),
+    "youtube-sin-privacidad": _c(
+        ("Vídeos de YouTube sin modo de privacidad", "YouTube videos without privacy-enhanced mode"),
+        ("El reproductor normal fija cookies y rastrea al visitante aunque no pulse el vídeo.",
+         "The standard player sets cookies and tracks visitors even if they do not play the video."),
+        ("Usa www.youtube-nocookie.com/embed/… o carga el vídeo solo tras un clic.",
+         "Use www.youtube-nocookie.com/embed/… or load the video only after a click."),
+        None, [359], [], info=True),
     # --- Modo activo -----------------------------------------------------------
     "git-expuesto": _c(
         ("Repositorio .git accesible", "Accessible .git repository"),
@@ -553,6 +662,55 @@ CATALOGO = {
         "A03", [1357], ["T1195.002"], info=True),
 }
 
+CATEGORIAS = ["transporte", "cabeceras", "sesion", "contenido", "componentes", "exposicion", "dns", "privacidad", "codigo"]
+CATEGORIA = {}
+for _cat, _ids in {
+    "transporte": "sin-https http-sin-redireccion sin-hsts hsts-corto cert-invalido cert-caduca tls-obsoleto tls-antiguo-aceptado",
+    "cabeceras": "sin-csp csp-debil sin-antiframe sin-nosniff sin-referrer sin-permissions-policy sin-coop cors-permisivo "
+                 "cache-sensible metodos-peligrosos",
+    "sesion": "cookie-sin-secure cookie-sin-httponly cookie-sin-samesite sin-csrf password-get panel-admin xmlrpc "
+              "usuarios-enumerables cors-reflejado",
+    "contenido": "contenido-mixto contenido-mixto-pasivo formulario-inseguro tabnabbing",
+    "componentes": "sin-sri libreria-vulnerable libreria-sin-soporte cms-version dependencia-sin-fijar accion-sin-fijar "
+                   "imagen-latest descarga-ejecutada contenedor-root",
+    "exposicion": "version-expuesta emails-expuestos comentarios-sensibles error-detallado listado-directorios secreto-expuesto "
+                  "source-map robots-sensible sin-security-txt git-expuesto env-expuesto copia-expuesta config-expuesta info-servidor",
+    "dns": "spf-ausente spf-permisivo dmarc-ausente dmarc-sin-politica dnssec-ausente caa-ausente",
+    "privacidad": "rastreadores-terceros fuentes-google youtube-sin-privacidad",
+    "codigo": "secreto-codigo clave-privada env-en-ficheros inyeccion-sql inyeccion-comandos evaluacion-dinamica deserializacion "
+              "xss-dom tls-desactivado cripto-debil aleatorio-inseguro modo-depuracion excepcion-silenciada",
+}.items():
+    for _id in _ids.split():
+        CATEGORIA[_id] = _cat
+
+# Servicios de terceros conocidos: (patrón de host, tipo, nombre, rastreador)
+TERCEROS = [
+    (r"google-analytics\.com|analytics\.google\.com", "analitica", "Google Analytics", True),
+    (r"googletagmanager\.com", "analitica", "Google Tag Manager", True),
+    (r"clarity\.ms", "analitica", "Microsoft Clarity", True),
+    (r"hotjar\.com", "analitica", "Hotjar", True),
+    (r"matomo|piwik", "analitica", "Matomo", False),
+    (r"plausible\.io", "analitica", "Plausible", False),
+    (r"connect\.facebook\.net|facebook\.com/tr", "publicidad", "Meta Pixel", True),
+    (r"doubleclick\.net|googlesyndication\.com|googleadservices\.com", "publicidad", "Google Ads", True),
+    (r"snap\.licdn\.com|linkedin\.com/px", "publicidad", "LinkedIn Insight", True),
+    (r"analytics\.tiktok\.com", "publicidad", "TikTok Pixel", True),
+    (r"platform\.twitter\.com|static\.ads-twitter\.com", "publicidad", "X (Twitter)", True),
+    (r"instagram\.com/embed|cdninstagram\.com", "publicidad", "Instagram", True),
+    (r"youtube-nocookie\.com", "video", "YouTube (privacidad)", False),
+    (r"youtube\.com|ytimg\.com", "video", "YouTube", True),
+    (r"vimeo\.com|vimeocdn\.com", "video", "Vimeo", False),
+    (r"fonts\.googleapis\.com|fonts\.gstatic\.com", "fuentes", "Google Fonts", False),
+    (r"use\.typekit\.net|p\.typekit\.net", "fuentes", "Adobe Fonts", False),
+    (r"maps\.googleapis\.com|maps\.google\.|google\.com/maps", "mapas", "Google Maps", False),
+    (r"openstreetmap\.org", "mapas", "OpenStreetMap", False),
+    (r"cdn\.jsdelivr\.net|cdnjs\.cloudflare\.com|unpkg\.com|code\.jquery\.com|ajax\.googleapis\.com|stackpath\.bootstrapcdn\.com",
+     "cdn", "CDN público", False),
+    (r"cookielaw\.org|onetrust\.com|cookiebot\.com|consentmanager|iubenda\.com|complianz|cookieyes\.com", "consentimiento",
+     "Gestor de consentimiento", False),
+    (r"recaptcha|hcaptcha\.com|challenges\.cloudflare\.com", "seguridad", "CAPTCHA", False),
+]
+
 # Librerías JavaScript: (nombre, patrón de versión en URL o cabecera, [(versión corregida, [CVE])], sin soporte)
 LIBRERIAS = [
     ("jQuery", r"jquery(?:[.-]|/)(\d+\.\d+\.\d+)(?:[./-]|$)|jquery(?:\.min)?\.js\?ver=(\d+\.\d+\.\d+)|jQuery v(\d+\.\d+\.\d+)",
@@ -689,6 +847,30 @@ class InformeSeguridad:
     notas: list[str] = field(default_factory=list)
     modo: str = "pasivo"
     tls: dict = field(default_factory=dict)
+    inventario: dict = field(default_factory=dict)   # (tipo, nombre) -> {tipo, nombre, version, fuente}
+    terceros: dict = field(default_factory=dict)     # host -> {host, tipo, nombre, rastreador, paginas}
+    dns: dict = field(default_factory=dict)
+
+    def componente(self, tipo: str, nombre: str, version: str = "", fuente: str = "") -> None:
+        clave = (tipo, nombre.lower())
+        actual = self.inventario.get(clave)
+        if actual is None or (version and not actual["version"]):
+            self.inventario[clave] = {"tipo": tipo, "nombre": nombre, "version": version, "fuente": fuente[:200]}
+
+    def tercero(self, host: str, pagina: str) -> None:
+        host = host.lower()
+        if not host:
+            return
+        dato = self.terceros.get(host)
+        if dato is None:
+            tipo, nombre, rastreador = "otros", host, False
+            for patron, t_, n_, r_ in TERCEROS:
+                if re.search(patron, host):
+                    tipo, nombre, rastreador = t_, n_, r_
+                    break
+            dato = self.terceros[host] = {"host": host, "tipo": tipo, "nombre": nombre, "rastreador": rastreador, "paginas": []}
+        if len(dato["paginas"]) < 5 and pagina not in dato["paginas"]:
+            dato["paginas"].append(pagina)
 
     def anadir(self, id_: str, ubicacion: str, extracto: str = "", clave: str = "", detalle: str = "",
                cve: list[str] | None = None, vector: str | None = None, e: str | None = None) -> None:
@@ -707,7 +889,9 @@ class InformeSeguridad:
         base_txt = h.vector_base or ficha["v"]
         datos = {"id": h.id, "titulo": _t(ficha["t"]) + (f": {h.detalle}" if h.detalle else ""),
                  "descripcion": _t(ficha["d"]), "recomendacion": _t(ficha["r"]),
-                 "owasp": ficha["o"], "owasp_nombre": _t(OWASP[ficha["o"]]),
+                 "owasp": ficha["o"], "owasp_nombre": _t(OWASP[ficha["o"]]) if ficha["o"] else "",
+                 "categoria": CATEGORIA.get(h.id, "exposicion"),
+                 "categoria_nombre": aimarkers.t("cat." + CATEGORIA.get(h.id, "exposicion")),
                  "cwe": [f"CWE-{c}" for c in ficha["cwe"]],
                  "mitre": [{"id": m, "nombre": MITRE[m]} for m in ficha["mitre"]],
                  "cve": h.cve, "evidencias": [{"ubicacion": u, "extracto": x} for u, x in h.evidencias],
@@ -757,7 +941,23 @@ class InformeSeguridad:
         puntuados = [h["cvss"] for h in hallazgos if h["cvss"]]
         maximo = max(puntuados, default=0.0)
         por_severidad = {s: sum(1 for h in hallazgos if h["severidad"] == s) for s in ("critical", "high", "medium", "low", "none")}
+        categorias = []
+        for cat in CATEGORIAS:
+            lista = [h for h in hallazgos if h["categoria"] == cat]
+            if not lista:
+                continue
+            niveles = {n: sum(1 for h in lista if h["nivel_riesgo"] == n) for n in ("critico", "alto", "medio", "bajo")}
+            peor = next((n for n in ("critico", "alto", "medio", "bajo") if niveles[n]), "bajo")
+            categorias.append({"id": cat, "nombre": aimarkers.t("cat." + cat), "total": len(lista), "por_nivel": niveles,
+                               "peor": peor, "cvss_max": max((h["cvss"] or 0 for h in lista), default=0)})
+        orden_tipo = ["cms", "plugin", "tema", "libreria", "servidor", "lenguaje"]
+        inventario = sorted((dict(c, tipo_nombre=aimarkers.t("comp." + c["tipo"])) for c in self.inventario.values()),
+                            key=lambda c: (orden_tipo.index(c["tipo"]) if c["tipo"] in orden_tipo else 9, c["nombre"].lower()))
+        orden_ter = ["analitica", "publicidad", "video", "fuentes", "mapas", "consentimiento", "seguridad", "cdn", "otros"]
+        terceros = [dict(x, tipo_nombre=aimarkers.t("tercero." + x["tipo"])) for x in
+                    sorted(self.terceros.values(), key=lambda x: (orden_ter.index(x["tipo"]), x["nombre"].lower()))]
         return {"modo": self.modo, "contexto": self.contexto.descripcion(), "requisitos": req,
+                "categorias": categorias, "inventario": inventario, "terceros": terceros, "dns": self.dns,
                 "cvss_max": maximo, "severidad_max": cvss4.severidad(maximo), "por_severidad": por_severidad,
                 "triada": triada, "matriz": matriz, "hallazgos": hallazgos, "notas": self.notas, "tls": self.tls,
                 "owasp_version": "OWASP Top 10:2025", "cvss_version": "CVSS v4.0"}
@@ -789,6 +989,7 @@ def detectar_librerias(informe: InformeSeguridad, texto: str, ubic: str) -> None
             if not version:
                 continue
             v = _version(version)
+            informe.componente("libreria", nombre, version, ubic)
             if eol:
                 informe.anadir("libreria-sin-soporte", ubic, m.group(0), clave=nombre, detalle=f"{nombre} {version}")
                 break
@@ -837,6 +1038,11 @@ def analizar_html_seguridad(informe: InformeSeguridad, texto: str, url: str, ubi
                 and url.startswith("http") and not web.mismo_sitio(absoluta, url) and "integrity" not in attrs:
             if not SIN_SRI_POSIBLE.search(absoluta):
                 informe.anadir("sin-sri", ubic, absoluta, clave=absoluta.split("?")[0])
+        if absoluta.lower().startswith(("http://", "https://")) and url.startswith("http") and not web.mismo_sitio(absoluta, url):
+            informe.tercero(urllib.parse.urlsplit(absoluta).hostname or "", ubic)
+        wp = re.search(r"/wp-content/(plugins|themes)/([\w.-]+)/[^?\s]*(?:\?ver=([\w.-]+))?", absoluta)
+        if wp:
+            informe.componente("plugin" if wp.group(1) == "plugins" else "tema", wp.group(2), wp.group(3) or "", absoluta)
         if etiqueta == "script":
             detectar_librerias(informe, absoluta, ubic)
             if RE_SCRIPTS_PAGO.search(absoluta):
@@ -846,6 +1052,17 @@ def analizar_html_seguridad(informe: InformeSeguridad, texto: str, url: str, ubi
                     texto, re.I)
     if gen:
         informe.anadir("cms-version", ubic, gen.group(1), clave="cms", detalle=gen.group(1))
+        partes_cms = re.match(r"(\D+?)\s*([\d.]+)", gen.group(1))
+        if partes_cms:
+            informe.componente("cms", partes_cms.group(1).strip(), partes_cms.group(2), ubic)
+    if url.startswith("http"):
+        for m in re.finditer(r"<a\b([^>]{0,1500})>", texto, re.I):
+            attrs = web.atributos(m.group(1))
+            destino = attrs.get("href", "")
+            if attrs.get("target", "").lower() == "_blank" and destino.lower().startswith(("http://", "https://")) \
+                    and not web.mismo_sitio(destino, url) and "noopener" not in attrs.get("rel", "").lower() \
+                    and "noreferrer" not in attrs.get("rel", "").lower():
+                informe.anadir("tabnabbing", ubic, destino[:150], clave="tab")
     # Formularios
     for f in RE_FORM.finditer(texto):
         attrs = web.atributos(f.group(1))
@@ -943,6 +1160,12 @@ def analizar_cabeceras(informe: InformeSeguridad, p: web.Pagina, ubic: str) -> N
         informe.anadir("sin-referrer", ubic, "Referrer-Policy: —")
     if not p.cabecera("permissions-policy"):
         informe.anadir("sin-permissions-policy", ubic, "Permissions-Policy: —", clave="pp")
+    if not p.cabecera("cross-origin-opener-policy"):
+        informe.anadir("sin-coop", ubic, "Cross-Origin-Opener-Policy: —", clave="coop")
+    if p.cabecera("server"):
+        informe.componente("servidor", p.cabecera("server")[:60], "", ubic)
+    if p.cabecera("x-powered-by"):
+        informe.componente("lenguaje", p.cabecera("x-powered-by")[:60], "", ubic)
     for nombre in ("server", "x-powered-by", "x-aspnet-version", "x-aspnetmvc-version", "x-generator", "x-drupal-cache", "x-runtime"):
         valor = p.cabecera(nombre)
         if valor and (re.search(r"\d", valor) or nombre in ("x-powered-by", "x-aspnet-version", "x-generator")):
@@ -1044,8 +1267,7 @@ def comprobar_activo(informe: InformeSeguridad, base: str, opciones: web.Opcione
     if aleatoria and RE_ERRORES.search(aleatoria.texto()):
         informe.anadir("error-detallado", aleatoria.url, RE_ERRORES.search(aleatoria.texto()).group(0))
     for i, (ruta, id_, validar) in enumerate(RUTAS_ACTIVAS):
-        if callable(opciones.progreso):
-            opciones.progreso(aimarkers.t("prog.activo", n=f"{i + 1}/{len(RUTAS_ACTIVAS)}"))
+        aimarkers.informar("activo", i, len(RUTAS_ACTIVAS), ruta)
         time.sleep(max(0.2, opciones.retardo))
         p, _ = web.obtener(raiz + ruta, maximo=262_144, timeout=15, seguir=False)
         peticiones += 1
@@ -1056,6 +1278,19 @@ def comprobar_activo(informe: InformeSeguridad, base: str, opciones: web.Opcione
         if validar(p.cuerpo, p.texto()):
             extracto = ruta if not p.es_html and b"\x00" in p.cuerpo[:200] else p.texto()[:120]
             informe.anadir(id_, raiz + ruta, extracto, clave=ruta)
+    autor, _ = web.obtener(raiz + "/?author=1", maximo=50_000, seguir=False)
+    peticiones += 1
+    destino = autor.cabecera("location") if autor else ""
+    if autor and autor.estado in (301, 302) and re.search(r"/author/[^/]+/?", destino):
+        informe.anadir("usuarios-enumerables", raiz + "/?author=1", f"Location: {destino}", clave="author")
+    readme, _ = web.obtener(raiz + "/readme.html", maximo=50_000, seguir=False)
+    peticiones += 1
+    if readme and readme.estado == 200:
+        version = re.search(r"Version\s+([\d.]+)", readme.texto())
+        if version and "WordPress" in readme.texto():
+            informe.anadir("cms-version", raiz + "/readme.html", f"WordPress {version.group(1)}", clave="cms",
+                           detalle=f"WordPress {version.group(1)}")
+            informe.componente("cms", "WordPress", version.group(1), raiz + "/readme.html")
     opciones_resp, _ = web.obtener(raiz + "/", metodo="OPTIONS", maximo=10_000, seguir=False)
     peticiones += 1
     if opciones_resp:
@@ -1086,6 +1321,89 @@ def comprobar_activo(informe: InformeSeguridad, base: str, opciones: web.Opcione
     informe.notas.append(aimarkers.t("seg.peticiones", n=peticiones))
 
 
+
+# ---------------------------------------------------------------------------
+# Correo y DNS (SPF, DMARC, DNSSEC, CAA) mediante DNS sobre HTTPS
+# ---------------------------------------------------------------------------
+
+PROVEEDORES_DOH = [("Cloudflare", "https://cloudflare-dns.com/dns-query"), ("Google", "https://dns.google/resolve")]
+
+
+def consulta_dns(nombre: str, tipo: str) -> tuple[list[str], bool | None, str]:
+    """Consulta DNS por HTTPS (formato JSON). Devuelve (respuestas, AD, proveedor) o ([], None, "") si falla."""
+    if not re.fullmatch(r"[A-Za-z0-9_.-]{1,253}", nombre):
+        return [], None, ""
+    for proveedor, base in PROVEEDORES_DOH:
+        respuesta, _ = web.obtener(f"{base}?name={urllib.parse.quote(nombre)}&type={tipo}", maximo=200_000, timeout=8,
+                                   cabeceras={"Accept": "application/dns-json"})
+        if respuesta is None or respuesta.estado != 200:
+            continue
+        try:
+            datos = json.loads(respuesta.texto())
+        except ValueError:
+            continue
+        if not isinstance(datos, dict) or datos.get("Status") not in (0, 3):
+            continue
+        respuestas = [str(r.get("data", "")) for r in datos.get("Answer", []) if isinstance(r, dict)]
+        return respuestas, bool(datos.get("AD")), proveedor
+    return [], None, ""
+
+
+def _txt(registro: str) -> str:
+    return "".join(re.findall(r'"((?:[^"\\]|\\.)*)"', registro)) or registro.strip('"')
+
+
+def analizar_dns(informe: InformeSeguridad, host: str) -> None:
+    dominio = host.lower().removeprefix("www.")
+    if not dominio or re.fullmatch(r"[\d.]+|\[?[0-9a-f:]+\]?|localhost", dominio):
+        return
+    aimarkers.informar("dns", 0, 4, dominio)
+    txt, _, proveedor = consulta_dns(dominio, "TXT")
+    if not proveedor:
+        informe.notas.append(aimarkers.t("seg.dns_no", e=dominio))
+        return
+    informe.notas.append(aimarkers.t("seg.dns_proveedor", p=proveedor))
+    spf = [_txt(r) for r in txt if _txt(r).lower().startswith("v=spf1")]
+    informe.dns["spf"] = spf
+    if not spf:
+        informe.anadir("spf-ausente", dominio, "TXT v=spf1: —")
+    elif len(spf) > 1:
+        informe.anadir("spf-permisivo", dominio, " | ".join(spf)[:200])
+    elif re.search(r"[+?]all\b", spf[0]) or not re.search(r"[-~]all\b|redirect=", spf[0]):
+        informe.anadir("spf-permisivo", dominio, spf[0][:200])
+    aimarkers.informar("dns", 1, 4, "_dmarc." + dominio)
+    dmarc_txt, _, _ = consulta_dns("_dmarc." + dominio, "TXT")
+    dmarc = [_txt(r) for r in dmarc_txt if _txt(r).lower().startswith("v=dmarc1")]
+    if not dmarc and dominio.count(".") > 1:
+        organizativo = ".".join(dominio.split(".")[-2:])
+        dmarc = [_txt(r) for r in consulta_dns("_dmarc." + organizativo, "TXT")[0] if _txt(r).lower().startswith("v=dmarc1")]
+    informe.dns["dmarc"] = dmarc
+    if not dmarc:
+        informe.anadir("dmarc-ausente", "_dmarc." + dominio, "TXT v=DMARC1: —")
+    elif re.search(r"\bp\s*=\s*none\b", dmarc[0], re.I):
+        informe.anadir("dmarc-sin-politica", "_dmarc." + dominio, dmarc[0][:200])
+    aimarkers.informar("dns", 2, 4, dominio)
+    _, ad, _ = consulta_dns(dominio, "A")
+    informe.dns["dnssec"] = ad
+    if ad is False:
+        informe.anadir("dnssec-ausente", dominio, "AD = false")
+    aimarkers.informar("dns", 3, 4, dominio)
+    caa, _, prov_caa = consulta_dns(dominio, "CAA")
+    informe.dns["caa"] = caa
+    if prov_caa and not caa:
+        informe.anadir("caa-ausente", dominio, "CAA: —")
+
+
+def hallazgos_privacidad(informe: InformeSeguridad) -> None:
+    for dato in informe.terceros.values():
+        ejemplo = dato["paginas"][0] if dato["paginas"] else ""
+        if dato["rastreador"] and dato["tipo"] in ("analitica", "publicidad"):
+            informe.anadir("rastreadores-terceros", ejemplo, f"{dato['nombre']} ({dato['host']})", clave="rastreadores")
+        if dato["nombre"] == "Google Fonts":
+            informe.anadir("fuentes-google", ejemplo, dato["host"], clave="gf")
+        if dato["nombre"] == "YouTube":
+            informe.anadir("youtube-sin-privacidad", ejemplo, dato["host"], clave="yt")
+
 # ---------------------------------------------------------------------------
 # Puntos de entrada
 # ---------------------------------------------------------------------------
@@ -1093,8 +1411,7 @@ def comprobar_activo(informe: InformeSeguridad, base: str, opciones: web.Opcione
 
 def analizar_web(rastreo: web.Rastreo, opciones: web.Opciones) -> InformeSeguridad:
     informe = InformeSeguridad()
-    if callable(opciones.progreso):
-        opciones.progreso(aimarkers.t("prog.seguridad"))
+    aimarkers.informar("seguridad", 0, 1)
     if not rastreo.paginas:
         return informe
     primera = rastreo.paginas[0]
@@ -1111,7 +1428,8 @@ def analizar_web(rastreo: web.Rastreo, opciones: web.Opciones) -> InformeSegurid
     if inicio.lower().startswith("https://") and primera.url.lower().startswith("http://"):
         informe.anadir("sin-https", primera.url, f"{inicio} → {primera.url}")
     # Páginas
-    for p in rastreo.paginas:
+    for indice, p in enumerate(rastreo.paginas):
+        aimarkers.informar("seguridad", indice, len(rastreo.paginas), p.url)
         ubic = p.url
         analizar_cabeceras(informe, p, ubic)
         analizar_cookies(informe, p, ubic)
@@ -1129,6 +1447,9 @@ def analizar_web(rastreo: web.Rastreo, opciones: web.Opciones) -> InformeSegurid
     st, _ = web.obtener(f"{partes.scheme}://{partes.netloc}/.well-known/security.txt", maximo=50_000, timeout=10)
     if not st or st.estado != 200 or st.es_html or "contact:" not in st.texto().lower():
         informe.anadir("sin-security-txt", "/.well-known/security.txt", "404 / —", clave="st")
+    hallazgos_privacidad(informe)
+    if getattr(opciones, "dns", True):
+        analizar_dns(informe, urllib.parse.urlsplit(primera.url).hostname or "")
     # Modo activo
     if opciones.activo:
         if opciones.autorizado:
@@ -1264,7 +1585,9 @@ def analizar_texto_codigo(informe: InformeSeguridad, texto: str, nombre: str, ub
 def analizar_ficheros(rutas: list[Path], raiz: Path) -> InformeSeguridad:
     informe = InformeSeguridad(contexto=Contexto(ficheros=True))
     omitidos = 0
-    for ruta in rutas:
+    for indice, ruta in enumerate(rutas):
+        if indice % 10 == 0:
+            aimarkers.informar("codigo", indice, len(rutas), ruta.name)
         nombre = ruta.name
         ext = ruta.suffix.lower()
         if not (ext in EXT_REVISABLES or nombre.lower() in ("dockerfile", ".env", "package.json", "id_rsa", "id_dsa", "id_ecdsa",
@@ -1327,21 +1650,29 @@ def informe_consola(datos: dict, color: bool, max_ev: int = 3) -> list[str]:
         salida.append(f"{etiqueta_p if p == 5 else '':>{len(etiqueta_p)}} {p} " + fila)
     if not datos["hallazgos"]:
         salida += ["", t("seg.sin_hallazgos")]
-    for h in datos["hallazgos"]:
-        salida.append("")
-        cvss = f"CVSS {h['cvss']:.1f} ({t('sev.' + h['severidad'])}, B {h['cvss_base']:.1f})" if h["cvss"] is not None else t("seg.informativo")
-        etiqueta = f"[{t('nivel_riesgo.' + h['nivel_riesgo'])} {h['riesgo']}]"
-        salida.append(f"  {c(h['nivel_riesgo'], etiqueta)} {h['titulo']} — {cvss}")
-        refs = [f"OWASP {h['owasp']}"] + h["cwe"][:2] + [m["id"] for m in h["mitre"]] + h["cve"][:3]
-        salida.append(f"      {', '.join(refs)}   CID {h['cid']['C']}/{h['cid']['I']}/{h['cid']['D']}   "
-                      f"P{h['probabilidad']}×I{h['impacto']}")
-        if h["vector"]:
-            salida.append(f"      {h['vector']}")
-        for e in h["evidencias"][:max_ev]:
-            salida.append(f"      {e['ubicacion']}  {e['extracto']}")
-        if h["veces"] > max_ev:
-            salida.append("      " + t("ui.mas", n=h["veces"] - max_ev))
-        salida.append(f"      {t('seg.recomendacion')}: {h['recomendacion']}")
+    for cat in datos["categorias"]:
+        salida += ["", f"  {cat['nombre'].upper()}  ({cat['total']})"]
+        for h in (x for x in datos["hallazgos"] if x["categoria"] == cat["id"]):
+            salida.append("")
+            cvss = f"CVSS {h['cvss']:.1f} ({t('sev.' + h['severidad'])}, B {h['cvss_base']:.1f})" if h["cvss"] is not None else t("seg.informativo")
+            etiqueta = f"[{t('nivel_riesgo.' + h['nivel_riesgo'])} {h['riesgo']}]"
+            salida.append(f"  {c(h['nivel_riesgo'], etiqueta)} {h['titulo']} — {cvss}")
+            refs = ([f"OWASP {h['owasp']}"] if h["owasp"] else []) + h["cwe"][:2] + [m["id"] for m in h["mitre"]] + h["cve"][:3]
+            salida.append(f"      {', '.join(refs)}   CID {h['cid']['C']}/{h['cid']['I']}/{h['cid']['D']}   "
+                          f"P{h['probabilidad']}×I{h['impacto']}")
+            if h["vector"]:
+                salida.append(f"      {h['vector']}")
+            for e in h["evidencias"][:max_ev]:
+                salida.append(f"      {e['ubicacion']}  {e['extracto']}")
+            if h["veces"] > max_ev:
+                salida.append("      " + t("ui.mas", n=h["veces"] - max_ev))
+            salida.append(f"      {t('seg.recomendacion')}: {h['recomendacion']}")
+    if datos["inventario"]:
+        salida += ["", f"  {t('seg.inventario').upper()}"]
+        salida += [f"      {x['tipo_nombre']:<10} {x['nombre']} {x['version']}".rstrip() for x in datos["inventario"]]
+    if datos["terceros"]:
+        salida += ["", f"  {t('seg.terceros').upper()}"]
+        salida += [f"      {x['tipo_nombre']:<28} {x['nombre']} ({x['host']})" for x in datos["terceros"]]
     if datos["notas"]:
         salida.append("")
         salida += [f"  - {n}" for n in datos["notas"]]
@@ -1365,26 +1696,37 @@ def informe_markdown(datos: dict) -> list[str]:
     for p in range(5, 0, -1):
         md.append(f"| {p} | " + " | ".join(str(datos["matriz"][p - 1][i - 1] or "·") for i in range(1, 6)) + " |")
     md.append("")
-    if datos["hallazgos"]:
-        md += [f"| {t('seg.riesgo')} | {t('seg.hallazgos')} | CVSS | OWASP | CWE | MITRE ATT&CK | CID |",
-               "| --- | --- | --- | --- | --- | --- | --- |"]
-        for h in datos["hallazgos"]:
-            cvss = f"{h['cvss']:.1f} {t('sev.' + h['severidad'])}" if h["cvss"] is not None else t("seg.informativo")
-            md.append(f"| {t('nivel_riesgo.' + h['nivel_riesgo'])} ({h['riesgo']}) | {e(h['titulo'])} | {cvss} | {h['owasp']} | "
-                      f"{', '.join(h['cwe'])} | {', '.join(m['id'] for m in h['mitre'])} | {h['cid']['C']}/{h['cid']['I']}/{h['cid']['D']} |")
+    if datos["categorias"]:
+        md += [f"**{t('seg.categorias')}**", "", f"| {t('seg.categorias')} | {t('seg.hallazgos')} | " +
+               " | ".join(t("nivel_riesgo." + n) for n in ("critico", "alto", "medio", "bajo")) + " |",
+               "| --- | --- | --- | --- | --- | --- |"]
+        for cat in datos["categorias"]:
+            md.append(f"| {e(cat['nombre'])} | {cat['total']} | " + " | ".join(str(cat["por_nivel"][n]) for n in ("critico", "alto", "medio", "bajo")) + " |")
         md.append("")
-        for h in datos["hallazgos"]:
-            md += [f"#### {e(h['titulo'])}", "", e(h["descripcion"]), ""]
+    if not datos["hallazgos"]:
+        md += [t("seg.sin_hallazgos"), ""]
+    for cat in datos["categorias"]:
+        md += [f"#### {e(cat['nombre'])}", ""]
+        for h in (x for x in datos["hallazgos"] if x["categoria"] == cat["id"]):
+            cvss = f"CVSS {h['cvss']:.1f} ({t('sev.' + h['severidad'])})" if h["cvss"] is not None else t("seg.informativo")
+            refs = ([f"OWASP {h['owasp']}"] if h["owasp"] else []) + h["cwe"] + [m["id"] for m in h["mitre"]] + h["cve"]
+            md += [f"##### {e(h['titulo'])}", "",
+                   f"**{t('nivel_riesgo.' + h['nivel_riesgo'])} ({h['riesgo']})** · {cvss} · CID {h['cid']['C']}/{h['cid']['I']}/{h['cid']['D']}"
+                   f" · {', '.join(refs)}", "", e(h["descripcion"]), ""]
             if h["vector"]:
                 md.append(f"- `{h['vector']}`")
-            if h["cve"]:
-                md.append(f"- {', '.join(h['cve'])}")
             for ev in h["evidencias"][:5]:
                 extracto = e(ev["extracto"]).replace("|", "\\|")
                 md.append(f"- `{e(ev['ubicacion'])}` {extracto}")
             md += [f"- **{t('seg.recomendacion')}:** {e(h['recomendacion'])}", ""]
-    else:
-        md += [t("seg.sin_hallazgos"), ""]
+    if datos["inventario"]:
+        md += [f"#### {t('seg.inventario')}", "", "| | | |", "| --- | --- | --- |"]
+        md += [f"| {e(x['tipo_nombre'])} | {e(x['nombre'])} | {e(x['version'])} |" for x in datos["inventario"]]
+        md.append("")
+    if datos["terceros"]:
+        md += [f"#### {t('seg.terceros')}", "", "| | | |", "| --- | --- | --- |"]
+        md += [f"| {e(x['tipo_nombre'])} | {e(x['nombre'])} | `{e(x['host'])}` |" for x in datos["terceros"]]
+        md.append("")
     md += [f"_{e(t('seg.aviso'))}_", ""]
     return md
 
@@ -1401,27 +1743,46 @@ def informe_html(datos: dict) -> str:
               + "".join(f"<th>{i}</th>" for i in range(1, 6)) + f"</tr>{celdas}</table>")
     tri = "".join(f"<li><span>{e(t('seg.' + k.lower()))}</span><strong class='t-{datos['triada'][k]['nivel']}'>"
                   f"{e(t('nivel_riesgo.' + datos['triada'][k]['nivel']))}</strong></li>" for k in ("C", "I", "D"))
-    filas = ""
-    for h in datos["hallazgos"]:
-        cvss = f"{h['cvss']:.1f} · {e(t('sev.' + h['severidad']))}" if h["cvss"] is not None else e(t("seg.informativo"))
-        refs = (f"<a href='https://owasp.org/Top10/2025/'>OWASP {h['owasp']}</a> "
-                + " ".join(f"<a href='https://cwe.mitre.org/data/definitions/{c[4:]}.html'>{c}</a>" for c in h["cwe"])
-                + " " + " ".join(f"<a href='https://attack.mitre.org/techniques/{m['id'].replace('.', '/')}/' title='{e(m['nombre'])}'>{m['id']}</a>"
-                                 for m in h["mitre"])
-                + " " + " ".join(f"<a href='https://www.cve.org/CVERecord?id={c}'>{c}</a>" for c in h["cve"]))
-        evid = "".join(f"<li><code>{e(x['ubicacion'])}</code> {e(x['extracto'])}</li>" for x in h["evidencias"][:5])
-        vector = f"<p><code>{e(h['vector'])}</code></p>" if h["vector"] else ""
-        filas += (f"<tr><td><span class='nivel r-{h['nivel_riesgo']}'>{e(t('nivel_riesgo.' + h['nivel_riesgo']))} {h['riesgo']}</span></td>"
-                  f"<td><strong>{e(h['titulo'])}</strong><p>{e(h['descripcion'])}</p><p class='refs'>{refs}</p>{vector}"
-                  f"<ul>{evid}</ul><p><em>{e(t('seg.recomendacion'))}:</em> {e(h['recomendacion'])}</p></td>"
-                  f"<td class='num'>{cvss}</td><td>{h['cid']['C']}/{h['cid']['I']}/{h['cid']['D']}</td></tr>")
-    tabla = (f"<table><thead><tr><th>{e(t('seg.riesgo'))}</th><th>{e(t('seg.hallazgos'))}</th><th>CVSS v4.0</th><th>CID</th></tr></thead>"
-             f"<tbody>{filas}</tbody></table>") if filas else f"<p>{e(t('seg.sin_hallazgos'))}</p>"
+    resumen_cat = "".join(
+        f"<li><span>{e(c['nombre'])}</span><span class='barra-cat'>"
+        + "".join(f"<i class='r-{n}' style='flex:{c['por_nivel'][n]}'></i>" for n in ("critico", "alto", "medio", "bajo") if c["por_nivel"][n])
+        + f"</span><strong>{c['total']}</strong></li>" for c in datos["categorias"])
+    secciones = ""
+    for cat in datos["categorias"]:
+        filas = ""
+        for h in (x for x in datos["hallazgos"] if x["categoria"] == cat["id"]):
+            cvss = f"{h['cvss']:.1f} · {e(t('sev.' + h['severidad']))}" if h["cvss"] is not None else e(t("seg.informativo"))
+            refs = ((f"<a href='https://owasp.org/Top10/2025/'>OWASP {h['owasp']}</a> " if h["owasp"] else "")
+                    + " ".join(f"<a href='https://cwe.mitre.org/data/definitions/{c[4:]}.html'>{c}</a>" for c in h["cwe"])
+                    + " " + " ".join(f"<a href='https://attack.mitre.org/techniques/{m['id'].replace('.', '/')}/' title='{e(m['nombre'])}'>{m['id']}</a>"
+                                     for m in h["mitre"])
+                    + " " + " ".join(f"<a href='https://www.cve.org/CVERecord?id={c}'>{c}</a>" for c in h["cve"]))
+            evid = "".join(f"<li><code>{e(x['ubicacion'])}</code> {e(x['extracto'])}</li>" for x in h["evidencias"][:5])
+            vector = f"<p><code>{e(h['vector'])}</code></p>" if h["vector"] else ""
+            filas += (f"<tr><td><span class='nivel r-{h['nivel_riesgo']}'>{e(t('nivel_riesgo.' + h['nivel_riesgo']))} {h['riesgo']}</span></td>"
+                      f"<td><strong>{e(h['titulo'])}</strong><p>{e(h['descripcion'])}</p><p class='refs'>{refs}</p>{vector}"
+                      f"<ul>{evid}</ul><p><em>{e(t('seg.recomendacion'))}:</em> {e(h['recomendacion'])}</p></td>"
+                      f"<td class='num'>{cvss}</td><td>{h['cid']['C']}/{h['cid']['I']}/{h['cid']['D']}</td></tr>")
+        secciones += (f"<h4>{e(cat['nombre'])}</h4><table class='hallazgos-seg'><thead><tr><th>{e(t('seg.riesgo'))}</th>"
+                      f"<th>{e(t('seg.hallazgos'))}</th><th>CVSS v4.0</th><th>CID</th></tr></thead><tbody>{filas}</tbody></table>")
+    if not secciones:
+        secciones = f"<p>{e(t('seg.sin_hallazgos'))}</p>"
+    inventario = ""
+    if datos["inventario"]:
+        inventario = (f"<h4>{e(t('seg.inventario'))}</h4><table class='lista-seg'><tbody>"
+                      + "".join(f"<tr><td>{e(x['tipo_nombre'])}</td><td>{e(x['nombre'])}</td><td>{e(x['version'])}</td></tr>"
+                                for x in datos["inventario"]) + "</tbody></table>")
+    terceros = ""
+    if datos["terceros"]:
+        terceros = (f"<h4>{e(t('seg.terceros'))}</h4><table class='lista-seg'><tbody>"
+                    + "".join(f"<tr><td>{e(x['tipo_nombre'])}</td><td>{e(x['nombre'])}</td><td><code>{e(x['host'])}</code></td></tr>"
+                              for x in datos["terceros"]) + "</tbody></table>")
     return (f"<div class='seguridad'><h3>{e(t('seg.titulo'))}</h3>"
             f"<p class='meta'>{e(t('seg.contexto'))}: {e(datos['contexto'])} — {e(t('seg.requisitos'))}: C {e(t('req.' + req['CR']))}, "
             f"I {e(t('req.' + req['IR']))}, D {e(t('req.' + req['AR']))}</p>"
             f"<p class='meta'>{e(t('seg.cvss_max'))}: <strong>{datos['cvss_max']:.1f}</strong> ({e(t('sev.' + datos['severidad_max']))})</p>"
-            f"<div class='seg-resumen'><ul class='triada'>{tri}</ul>{matriz}</div>{tabla}"
+            f"<div class='seg-resumen'><ul class='triada'>{tri}</ul>{matriz}<ul class='categorias'>{resumen_cat}</ul></div>"
+            f"{secciones}{inventario}{terceros}"
             f"<p class='aviso-seg'>{e(t('seg.aviso'))}</p></div>")
 
 
@@ -1435,5 +1796,13 @@ CSS_HTML = """
 .r-bajo { background:color-mix(in srgb, var(--deb) 25%, transparent) } .r-medio { background:color-mix(in srgb, var(--med) 35%, transparent) }
 .r-alto { background:color-mix(in srgb, var(--fue) 45%, transparent) } .r-critico { background:color-mix(in srgb, var(--exp) 55%, transparent) }
 .t-alto, .t-critico { color:var(--exp) } .t-medio { color:var(--med) } .t-bajo { color:var(--deb) }
-.refs a { margin-right:6px; font-size:12px } .aviso-seg { color:var(--sub); font-size:13px }
+.refs a { margin-right:6px; font-size:12px; color:var(--deb) } .aviso-seg { color:var(--sub); font-size:13px }
+.hallazgos-seg { table-layout:fixed } .hallazgos-seg th:nth-child(1) { width:96px }
+.hallazgos-seg th:nth-child(3) { width:96px } .hallazgos-seg th:nth-child(4) { width:64px }
+.seguridad h4 { margin:22px 0 4px; font-size:15px } .lista-seg td { padding:4px 8px }
+.categorias { list-style:none; padding:0; margin:0; display:grid; gap:6px; min-width:260px; flex:1 }
+.categorias li { display:grid; grid-template-columns: minmax(120px, 1fr) 120px 24px; gap:10px; align-items:center; font-size:13px }
+.barra-cat { display:flex; height:8px; border-radius:4px; overflow:hidden; background:var(--borde) } .barra-cat i { display:block }
+.categorias strong { text-align:right }
+.seguridad td p { margin:6px 0 } .seguridad td ul { margin:6px 0 } .seguridad .nivel { display:inline-block }
 """

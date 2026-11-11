@@ -6,6 +6,7 @@
 
 | Versión | Soporte |
 | --- | --- |
+| 1.4.x | Sí |
 | 1.3.x | Sí |
 | 1.2.x | Sí |
 | 1.1.x | Sí |
@@ -53,4 +54,4 @@ aimarkers está pensado para analizar contenido **no confiable**: repositorios, 
 
 ## Privacidad
 
-aimarkers no envía datos a ningún sitio salvo la URL que le pidas analizar, sus imágenes y su `/llms.txt`. Usa `--sin-imagenes` si no quieres descargar las imágenes. Los informes pueden contener extractos del contenido analizado, incluidos los *prompts* guardados en imágenes: trátalos con la misma confidencialidad que el original. Por eso `.gitignore` excluye los informes generados.
+aimarkers no envía datos a ningún sitio salvo la URL que le pidas analizar, sus imágenes y su `/llms.txt`, y, en el análisis de seguridad, el nombre del dominio a un resolutor de DNS sobre HTTPS (Cloudflare, o Google como respaldo) para comprobar SPF, DMARC, DNSSEC y CAA; `--sin-dns` lo desactiva. Usa `--sin-imagenes` si no quieres descargar las imágenes. Los informes pueden contener extractos del contenido analizado, incluidos los *prompts* guardados en imágenes: trátalos con la misma confidencialidad que el original. Por eso `.gitignore` excluye los informes generados.

@@ -118,11 +118,20 @@
       </div>
     </section>
 
-    <section id="vista-analizando" class="vista analizando" hidden aria-live="polite">
-      <p class="titular revelando" id="texto-analizando" data-i18n="analizando">Analizando</p>
-      <p class="progreso" id="progreso"></p>
-      <div class="haz" aria-hidden="true"></div>
-      <div class="ilustracion analizando-ilu" id="destino-analizando"></div>
+    <section id="vista-analizando" class="vista analizando" hidden>
+      <div class="carga">
+        <div class="carga-texto">
+          <p class="carga-titulo titular revelando" id="texto-analizando" data-i18n="analizando">Analizando</p>
+          <p class="carga-fase" id="carga-fase" aria-live="polite"></p>
+          <div class="carga-cifra" aria-hidden="true"><span id="carga-porcentaje">0</span><small>%</small></div>
+          <div class="carga-barra" id="carga-barra" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"
+               data-i18n-aria="progreso-total"><i id="carga-relleno"></i></div>
+          <p class="carga-tiempo" id="carga-tiempo"></p>
+          <p class="carga-detalle" id="progreso"></p>
+          <ol class="carga-pasos" id="carga-pasos"></ol>
+        </div>
+        <div class="ilustracion analizando-ilu" id="destino-analizando"></div>
+      </div>
     </section>
 
     <section id="vista-resultado" class="vista resultado" hidden>
@@ -144,7 +153,15 @@
 
       <p class="explicita" id="r-explicita" hidden data-i18n="explicita">El propio contenido declara una herramienta de IA.</p>
 
+      <div class="segmentos" id="r-segmentos" role="group" data-i18n-aria="agrupar" hidden>
+        <span class="segmentos-etiqueta" data-i18n="ver-por">Ver por</span>
+        <div class="segmentado">
+          <button type="button" data-vista-ia="nivel" aria-pressed="true" data-i18n="ver-nivel">Nivel</button>
+          <button type="button" data-vista-ia="ubicacion" aria-pressed="false" data-i18n="ver-ubicacion">Fichero o página</button>
+        </div>
+      </div>
       <div id="r-grupos" class="grupos"></div>
+      <ol id="r-ubicaciones" class="ubicaciones" hidden></ol>
       <p class="sin-hallazgos" id="r-vacio" hidden data-i18n="sin-hallazgos">No hay marcadores. Recuerda que su ausencia no demuestra autoría humana.</p>
 
       <section class="seguridad" id="r-seguridad" hidden aria-labelledby="seg-titulo">
@@ -161,7 +178,27 @@
             <div class="matriz-rejilla" id="seg-matriz" role="table"></div>
           </figure>
         </div>
+        <div class="seg-categorias" id="seg-categorias"></div>
+        <div class="segmentos" role="group" data-i18n-aria="agrupar">
+          <span class="segmentos-etiqueta" data-i18n="agrupar-por">Agrupar por</span>
+          <div class="segmentado">
+            <button type="button" data-agrupar="riesgo" aria-pressed="true" data-i18n="agr-riesgo">Riesgo</button>
+            <button type="button" data-agrupar="categoria" aria-pressed="false" data-i18n="agr-categoria">Categoría</button>
+            <button type="button" data-agrupar="owasp" aria-pressed="false">OWASP</button>
+            <button type="button" data-agrupar="cid" aria-pressed="false" data-i18n="agr-cid">CID</button>
+          </div>
+        </div>
         <div id="seg-grupos" class="grupos seg-grupos"></div>
+        <div class="seg-anexos">
+          <section class="seg-anexo" id="seg-inventario-bloque" hidden>
+            <h3 data-i18n="seg-inventario">Componentes detectados</h3>
+            <table class="tabla-anexo"><tbody id="seg-inventario"></tbody></table>
+          </section>
+          <section class="seg-anexo" id="seg-terceros-bloque" hidden>
+            <h3 data-i18n="seg-terceros">Servicios de terceros</h3>
+            <table class="tabla-anexo"><tbody id="seg-terceros"></tbody></table>
+          </section>
+        </div>
         <p class="sin-hallazgos" id="seg-vacio" hidden data-i18n="seg-sin">No se han encontrado fallos con las comprobaciones realizadas.</p>
         <p class="aviso" data-i18n="seg-aviso">Evaluación automática y no intrusiva: no sustituye a una auditoría ni a una prueba de intrusión. El CVSS parte de vectores tipo para cada hallazgo y del contexto detectado.</p>
       </section>

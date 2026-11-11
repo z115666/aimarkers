@@ -4,6 +4,17 @@
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [semantic versioning](https://semver.org/).
 
+## [1.4.0] - 2026-11-11
+
+### Added
+- Security: email and DNS checks (SPF, DMARC, DNSSEC, CAA) over DNS over HTTPS (`--no-dns` to skip); privacy and third-party services (trackers, Google Fonts, YouTube without privacy mode); reverse tabnabbing; Cross-Origin-Opener-Policy; WordPress user enumeration via `?author=1` and version via `readme.html` in active mode.
+- Component inventory (CMS, plugins, themes, libraries, server) and third-party service list in the interface and reports.
+- Findings segmented into nine categories with a risk summary per category; the interface regroups them by risk, category, OWASP or CIA dimension, and shows AI markers by file or page.
+- Interface: progress screen with percentage, time left, phases and plain-language descriptions of each check.
+
+### Fixed
+- HTML reports: long URLs and code no longer overflow the report card.
+
 ## [1.3.1] - 2026-11-11
 
 ### Added

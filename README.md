@@ -131,9 +131,10 @@ The language applies to the console and the reports. Marker identifiers (`coauto
 | `--max-pages N` / `--max-images N` / `--delay S` | Crawl limits (`-1` / `0`: no limit) and pause between requests |
 | `--security` / `--security-only` | Add the security analysis / run only the security analysis |
 | `--active --authorized` | Active security mode, only with authorisation (see below) |
+| `--no-dns` | Skip the SPF, DMARC, DNSSEC and CAA checks |
 | `--cvss-threshold N` | Exit with code 3 if any security finding reaches CVSS N |
 
-Every option also has a Spanish name: `--evidencias`, `--umbral`, `--sin-imagenes`, `--silencioso`, `--sin-color`, `--rastrear`, `--max-paginas`, `--max-imagenes`, `--retardo`, `--seguridad`, `--solo-seguridad`, `--activo`, `--autorizado`, `--umbral-cvss`.
+Every option also has a Spanish name: `--evidencias`, `--umbral`, `--sin-imagenes`, `--silencioso`, `--sin-color`, `--rastrear`, `--max-paginas`, `--max-imagenes`, `--retardo`, `--seguridad`, `--solo-seguridad`, `--sin-dns`, `--activo`, `--autorizado`, `--umbral-cvss`.
 
 ## Graphical interface
 
@@ -145,7 +146,7 @@ python3 aimarkers.py --gui      # macOS / Linux from the folder
 py aimarkers.py --gui           # Windows
 ```
 
-It opens in your browser. Drop files, folders or images onto the window, type a path or URL, or use **Choose file** / **Choose folder** (the system file picker). Each analysis stays in the side list for the session, and you can save the report as HTML, Markdown or JSON. It has light and dark appearance (or follows the system) and switches between English and Spanish. Press Ctrl+C in the terminal to close it.
+It opens in your browser. While it works it shows the overall percentage, an estimate of the time left, each phase of the analysis and, in plain words, what it is checking at each moment. Drop files, folders or images onto the window, type a path or URL, or use **Choose file** / **Choose folder** (the system file picker). Each analysis stays in the side list for the session, and you can save the report as HTML, Markdown or JSON. It has light and dark appearance (or follows the system) and switches between English and Spanish. Press Ctrl+C in the terminal to close it.
 
 ![aimarkers graphical interface](docs/gui-dark.png)
 
@@ -174,7 +175,15 @@ aimarkers https://example.com --crawl --max-images 200 --delay 1
 - **CVSS v4.0** score computed inside the tool with FIRST's official algorithm (`cvss4.py`, checked against the reference calculator on 20,000 vectors). Each finding has a typical base vector; the threat metric (E) reflects whether there are public exploits, and the environmental requirements (CR, IR, AR) come from the **site's context**: login forms, personal data, payments or uploads raise them.
 - Position in a **5×5 risk matrix** (likelihood × impact, as in ISO 27005): likelihood from CVSS exploitability and exploit maturity, impact from the effect on each CIA dimension weighted by the context.
 
-**Websites, passive mode (default).** Only looks at what any visitor receives: HTTPS and redirection, certificate and TLS version, HSTS, CSP, anti-framing, nosniff, Referrer-Policy, Permissions-Policy, version disclosure, CORS, cookie attributes, mixed content, third-party scripts without SRI, JavaScript libraries with known CVEs (jQuery, jQuery UI, Bootstrap, AngularJS, Lodash, Moment, Handlebars), forms over HTTP, passwords sent by GET, forms without anti-CSRF tokens, sensitive HTML comments, detailed error messages, directory listing, exposed keys and tokens, source maps, `robots.txt` and `security.txt`.
+**Websites, passive mode (default).** Only looks at what any visitor receives: HTTPS and redirection, certificate and TLS version, HSTS, CSP, anti-framing, nosniff, Referrer-Policy, Permissions-Policy, version disclosure, CORS, cookie attributes, mixed content, third-party scripts without SRI, JavaScript libraries with known CVEs (jQuery, jQuery UI, Bootstrap, AngularJS, Lodash, Moment, Handlebars), forms over HTTP, passwords sent by GET, forms without anti-CSRF tokens, links vulnerable to reverse tabnabbing, sensitive HTML comments, detailed error messages, directory listing, exposed keys and tokens, source maps, `robots.txt` and `security.txt`.
+
+**Email and DNS.** SPF, DMARC, DNSSEC and CAA of the domain, which protect families and staff against emails spoofing the domain. They are queried over DNS over HTTPS (Cloudflare, with Google as fallback): only the domain name is sent. `--no-dns` skips them.
+
+**Privacy and third parties.** Lists every external service the pages load (analytics, advertising, video, fonts, maps, CDNs) and flags trackers, Google Fonts and YouTube embeds without privacy-enhanced mode, which matter under the GDPR on sites with minors or personal data.
+
+**Component inventory.** CMS, plugins and themes with their versions, JavaScript libraries, web server and language: a starting point for the asset inventory and patch management.
+
+**Segmented results.** Findings are grouped into categories (transport and encryption, headers, session, page content, components, information exposure, email and DNS, privacy, code), each with its own risk summary. In the interface you can regroup them by risk, category, OWASP or CIA dimension, and see the AI markers by file or page.
 
 **Websites, active mode (`--active --authorized`).** Also requests well-known sensitive paths (`/.git`, `/.env`, backups and SQL dumps, `wp-config` copies, `phpinfo`, `server-status`, WordPress user enumeration and XML-RPC, admin panels), dangerous HTTP methods, CORS origin reflection and acceptance of TLS 1.0/1.1. It sends no injection payloads, no passwords and no exploits. **Only use it on websites you own or are authorised in writing to test**: unauthorised testing may be a crime (in Spain, article 197 bis of the Criminal Code). Without `--authorized` the tool refuses to start active mode.
 
