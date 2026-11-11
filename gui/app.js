@@ -45,6 +45,8 @@ const TEXTOS = {
     "cap-seg-t": "Seguridad",
     "cap-seg": "OWASP Top 10, técnicas de MITRE ATT&CK, CVSS v4.0 y matriz de riesgos sobre la triada CID.",
     "analizando": "Analizando",
+    "parar": "Detener análisis", "deteniendo": "Deteniendo…",
+    "detenido": "Análisis detenido. No se ha guardado nada y los ficheros temporales se han borrado.",
     "subiendo": "Preparando {a} de {b} ficheros",
     "explicita": "El propio contenido declara una herramienta de IA.",
     "sin-hallazgos": "No hay marcadores. Recuerda que su ausencia no demuestra autoría humana.",
@@ -147,6 +149,8 @@ const TEXTOS = {
     "cap-seg-t": "Security",
     "cap-seg": "OWASP Top 10, MITRE ATT&CK techniques, CVSS v4.0 and a risk matrix over the CIA triad.",
     "analizando": "Analysing",
+    "parar": "Stop analysis", "deteniendo": "Stopping…",
+    "detenido": "Analysis stopped. Nothing was saved and temporary files were deleted.",
     "subiendo": "Preparing {a} of {b} files",
     "explicita": "The content itself declares an AI tool.",
     "sin-hallazgos": "No markers found. Remember that their absence does not prove human authorship.",
@@ -209,7 +213,7 @@ const TEXTOS = {
 };
 
 const $ = (id) => document.getElementById(id);
-const estado = { idioma: "es", tema: "auto", token: "", config: null, casos: [], actual: null, ocupado: false };
+const estado = { idioma: "es", tema: "auto", token: "", config: null, casos: [], actual: null, ocupado: false, parando: false, subida: null };
 
 function guardar(clave, valor) { try { localStorage.setItem("aimarkers." + clave, valor); } catch (_) { /* sin almacenamiento */ } }
 function leer(clave) { try { return localStorage.getItem("aimarkers." + clave); } catch (_) { return null; } }
@@ -258,8 +262,10 @@ async function api(ruta, cuerpo, opciones = {}) {
       headers: { "X-Aimarkers-Token": estado.token, ...(opciones.tipo ? { "Content-Type": opciones.tipo } : { "Content-Type": "application/json" }) },
       body: cuerpo === undefined ? undefined : (opciones.crudo ? cuerpo : JSON.stringify(cuerpo)),
       cache: "no-store",
+      signal: opciones.senal,
     });
-  } catch (_) {
+  } catch (e) {
+    if (e && e.name === "AbortError") throw new ErrorApi(409, "cancelled");
     throw new ErrorApi(0, "red");
   }
   if (!respuesta.ok) {
@@ -576,6 +582,9 @@ function ocupado(activo, plan = null) {
   $("analizar").disabled = activo;
   clearInterval(temporizadorFrase);
   if (activo) {
+    estado.parando = false;
+    $("parar").disabled = false;
+    $("parar-texto").textContent = t("parar");
     if (plan) reiniciarCarga(plan);
     mostrar("analizando");
     latido(true);
@@ -1064,6 +1073,32 @@ function seguirProgreso(activo) {
   }, 700);
 }
 
+// ---------- Detener un análisis iniciado por error ----------
+function esCancelacion(e) { return e instanceof ErrorApi && e.message === "cancelled"; }
+
+async function parar() {
+  if (!estado.ocupado || estado.parando) return;
+  estado.parando = true;
+  $("parar").disabled = true;
+  $("parar-texto").textContent = t("deteniendo");
+  const subida = estado.subida;
+  if (subida) {
+    subida.cancelada = true;
+    for (const control of subida.controles) control.abort();
+  }
+  try {
+    await api("/api/cancel", subida ? { lote: subida.lote } : {});
+  } catch (_) { /* si el servidor no responde, la petición de análisis acabará fallando y se avisará */ }
+}
+
+function detenido() {
+  seguirProgreso(false);
+  ocupado(false);
+  estado.subida = null;
+  mostrar(estado.actual ? "resultado" : "inicio");
+  avisar(t("detenido"));
+}
+
 async function analizar(peticion, casoExistente = null) {
   if (estado.ocupado || !opcionesValidas()) return;
   ocupado(true, peticion.lote && carga.plan.includes("subida") ? null : []);
@@ -1083,6 +1118,7 @@ async function analizar(peticion, casoExistente = null) {
     ocupado(false);
     pintarResultado(caso);
   } catch (e) {
+    if (esCancelacion(e)) return detenido();
     seguirProgreso(false);
     ocupado(false);
     mostrar(estado.actual ? "resultado" : "inicio");
@@ -1100,15 +1136,23 @@ async function subirYAnalizar(ficheros, nombre) {
   if (!ficheros.length || estado.ocupado || !opcionesValidas()) return;
   const lote = nuevoLote();
   ocupado(true, ["subida"]);
+  const subida = { lote, controles: new Set(), cancelada: false };
+  estado.subida = subida;
   actualizarCarga({ fase: "subida", hecho: 0, total: ficheros.length, porcentaje: 0 });
   let hechos = 0;
   try {
     const cola = [...ficheros];
     const trabajador = async () => {
-      while (cola.length) {
+      while (cola.length && !subida.cancelada) {
         const { fichero, ruta } = cola.shift();
-        await api(`/api/upload?batch=${lote}&path=${encodeURIComponent(ruta)}`, fichero,
-          { crudo: true, tipo: "application/octet-stream" });
+        const control = new AbortController();
+        subida.controles.add(control);
+        try {
+          await api(`/api/upload?batch=${lote}&path=${encodeURIComponent(ruta)}`, fichero,
+            { crudo: true, tipo: "application/octet-stream", senal: control.signal });
+        } finally {
+          subida.controles.delete(control);
+        }
         hechos += 1;
         actualizarCarga({ fase: "subida", hecho: hechos, total: ficheros.length, detalle: ruta,
           porcentaje: Math.round((hechos / ficheros.length) * 100) });
@@ -1116,11 +1160,14 @@ async function subirYAnalizar(ficheros, nombre) {
     };
     await Promise.all(Array.from({ length: Math.min(4, ficheros.length) }, trabajador));
   } catch (e) {
+    if (subida.cancelada || esCancelacion(e)) return detenido();
     ocupado(false);
     mostrar(estado.actual ? "resultado" : "inicio");
     avisar(mensajeError(e), true);
     return;
   }
+  if (subida.cancelada) return detenido();
+  estado.subida = null;
   estado.ocupado = false;
   carga.objetivo = 0;
   carga.mostrado = 0;
@@ -1224,6 +1271,7 @@ function conectar() {
     if (ev.key === "Escape" && $("opciones").open) { $("opciones").open = false; $("opciones").querySelector("summary").focus(); }
   });
 
+  $("parar").addEventListener("click", parar);
   $("l-repetir").addEventListener("click", () => {
     if (estado.actual) analizar(estado.actual.peticion, estado.actual);
   });

@@ -4,6 +4,12 @@
 
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [1.5.0] - 2026-11-11
+
+### Añadido
+- Botón para detener el análisis en la pantalla de progreso, por si se inicia por error. Cancela las subidas en curso y borra sus ficheros; el análisis se detiene en el siguiente punto de control (normalmente en menos de un segundo), borra sus carpetas temporales y no genera informe.
+- Línea de comandos: Ctrl+C detiene el análisis limpiamente con código de salida 130 y un mensaje, sin traza de error.
+
 ## [1.4.1] - 2026-11-11
 
 ### Cambiado

@@ -4,6 +4,12 @@
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [semantic versioning](https://semver.org/).
 
+## [1.5.0] - 2026-11-11
+
+### Added
+- Stop button on the progress screen to stop an analysis started by mistake. It cancels uploads in progress and deletes their files; the analysis stops at the next checkpoint (usually in under a second), deletes its temporary folders and writes no report.
+- Command line: Ctrl+C stops the analysis cleanly with exit code 130 and a message, without a traceback.
+
 ## [1.4.1] - 2026-11-11
 
 ### Changed

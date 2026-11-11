@@ -12,6 +12,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 import unittest
 import urllib.parse
 from pathlib import Path
@@ -313,6 +314,38 @@ class PruebasInterfaz(unittest.TestCase):
         estado, _, cuerpo = self.peticion("GET", "/api/progress")
         self.assertEqual(estado, 200)
         self.assertIn("porcentaje", json.loads(cuerpo))
+
+    def test_detener_analisis(self):
+        # Sin análisis en curso, parar no deja la parada pendiente para el siguiente
+        estado, _, cuerpo = self.peticion("POST", "/api/cancel", {})
+        self.assertEqual((estado, json.loads(cuerpo)["detenido"]), (200, False))
+        empezado = threading.Event()
+
+        def lento(objetivo, opciones=None):
+            for i in range(600):
+                aimarkers.informar("ficheros", i, 600)
+                empezado.set()
+                time.sleep(0.05)
+            raise AssertionError("no se detuvo")
+
+        respuesta = {}
+        original = aimarkers.analizar_objetivo
+        aimarkers.analizar_objetivo = lento
+        try:
+            hilo = threading.Thread(target=lambda: respuesta.update(r=self.peticion("POST", "/api/analyze", {"objetivo": "."})))
+            hilo.start()
+            self.assertTrue(empezado.wait(10))
+            estado, _, cuerpo = self.peticion("POST", "/api/cancel", {"lote": "../../fuera"})
+            self.assertEqual((estado, json.loads(cuerpo)["detenido"]), (200, True))
+            hilo.join(10)
+        finally:
+            aimarkers.analizar_objetivo = original
+        self.assertEqual(respuesta["r"][0], 409)
+        self.assertIn(b"cancelled", respuesta["r"][2])
+        self.assertFalse(aimarkers._PARAR.is_set())
+        self.assertEqual(self.peticion("GET", "/api/progress")[0], 200)
+        estado, _, _ = self.peticion("POST", "/api/analyze", {"objetivo": str(IMG / "c2pa_ia.jpg")})
+        self.assertEqual(estado, 200)
 
     def test_ruta_relativa_segura(self):
         self.assertEqual(str(self.gui.ruta_relativa_segura("a/./b\\c.txt")), "a/b/c.txt")

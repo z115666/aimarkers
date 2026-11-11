@@ -35,6 +35,7 @@ import struct
 import subprocess  # nosec B404
 import sys
 import tempfile
+import threading
 import time
 import urllib.error
 import urllib.parse
@@ -46,7 +47,7 @@ from datetime import datetime, timezone
 from html.parser import HTMLParser
 from pathlib import Path
 
-VERSION = "1.4.1"
+VERSION = "1.5.0"
 
 # ---------------------------------------------------------------------------
 # Idioma / Language
@@ -247,6 +248,8 @@ TEXTOS: dict[str, tuple[str, str]] = {
                     "Pause in seconds between requests when crawling (default 0.3)"),
     "cli.seguridad": ("Añadir el análisis de seguridad (OWASP Top 10, MITRE ATT&CK, CVSS v4.0, matriz de riesgos CID)",
                       "Add the security analysis (OWASP Top 10, MITRE ATT&CK, CVSS v4.0, CIA risk matrix)"),
+    "cli.detenido": ("Análisis detenido. No se ha generado ningún informe y los ficheros temporales se han borrado.",
+                     "Analysis stopped. No report was written and temporary files were deleted."),
     "cli.sin_dns": ("No consultar SPF, DMARC, DNSSEC ni CAA (se consultan por DNS sobre HTTPS)",
                     "Do not query SPF, DMARC, DNSSEC or CAA (queried over DNS over HTTPS)"),
     "cli.activo": ("Seguridad en modo activo: comprueba rutas sensibles conocidas (exige --autorizado)",
@@ -354,6 +357,24 @@ def t_lineas(n: int, ejemplo: str) -> str:
 
 FASES = ("subida", "descarga", "ia", "imagenes", "ficheros", "git", "scripts", "seguridad", "dns", "activo", "codigo")
 _AVANCE: dict = {"f": None}
+_PARAR = threading.Event()
+
+
+class Cancelado(BaseException):
+    """El usuario ha detenido el análisis.
+
+    Hereda de BaseException, como KeyboardInterrupt, para que los ``except Exception`` que toleran fallos
+    puntuales (una imagen corrupta, una página que no responde) no la absorban y el análisis se corte de verdad.
+    """
+
+
+def pedir_parada() -> None:
+    """Pide detener el análisis en curso; se atiende en el siguiente aviso de avance."""
+    _PARAR.set()
+
+
+def anular_parada() -> None:
+    _PARAR.clear()
 
 
 def fijar_avance(funcion) -> None:
@@ -361,7 +382,12 @@ def fijar_avance(funcion) -> None:
 
 
 def informar(fase: str, hecho: int = 0, total: int = 0, detalle: str = "") -> None:
-    """Comunica el avance de una fase; nunca interrumpe el análisis si el receptor falla."""
+    """Comunica el avance de una fase y atiende la petición de parada.
+
+    Si el receptor del progreso falla, el análisis sigue; si el usuario ha pedido parar, lanza Cancelado.
+    """
+    if _PARAR.is_set():
+        raise Cancelado()
     funcion = _AVANCE["f"]
     if funcion is None:
         return
@@ -2105,7 +2131,11 @@ def main(argv: list[str] | None = None) -> int:
         autorizado=args.autorizado, solo_seguridad=args.solo_seguridad, dns=not args.sin_dns, progreso=progreso)
     if opciones.seguridad:
         import aimarkers_seguridad  # noqa: F401 - registra sus textos para el informe
-    resultados = [analizar_objetivo(o, opciones=opciones) for o in args.objetivos]
+    try:
+        resultados = [analizar_objetivo(o, opciones=opciones) for o in args.objetivos]
+    except KeyboardInterrupt:  # Ctrl+C: las carpetas temporales ya se han borrado al salir de cada análisis
+        sys.stderr.write("\r\033[K" + t("cli.detenido") + "\n")
+        return 130
     if sys.stderr.isatty() and not args.silencioso:
         sys.stderr.write("\r\033[K")
 

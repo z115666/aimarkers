@@ -146,7 +146,7 @@ python3 aimarkers.py --gui      # macOS / Linux from the folder
 py aimarkers.py --gui           # Windows
 ```
 
-It opens in your browser. While it works it shows the overall percentage, an estimate of the time left, each phase of the analysis and, in plain words, what it is checking at each moment. Drop files, folders or images onto the window, type a path or URL, or use **Choose file** / **Choose folder** (the system file picker). Each analysis stays in the side list for the session, and you can save the report as HTML, Markdown or JSON. It has light and dark appearance (or follows the system) and switches between English and Spanish. Press Ctrl+C in the terminal to close it.
+It opens in your browser. While it works it shows the overall percentage, an estimate of the time left, each phase of the analysis and, in plain words, what it is checking at each moment; **Stop analysis** cancels it if you started it by mistake. Drop files, folders or images onto the window, type a path or URL, or use **Choose file** / **Choose folder** (the system file picker). Each analysis stays in the side list for the session, and you can save the report as HTML, Markdown or JSON. It has light and dark appearance (or follows the system) and switches between English and Spanish. Press Ctrl+C in the terminal to close it.
 
 ![aimarkers graphical interface](docs/gui-dark.png)
 

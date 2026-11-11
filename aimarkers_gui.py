@@ -70,10 +70,12 @@ class Estado:
         self.lote_ficheros: dict[str, int] = {}
         self.resultados: dict[str, list] = {}
         self.cerrojo = threading.Lock()
+        self.contador = threading.Lock()
         self.puerto = 0
         self.progreso: dict = {}
         self.plan: list[tuple[str, float]] = []
         self.idioma_forzado = False
+        self.analizando = 0  # peticiones de análisis en curso (incluidas las que esperan turno)
 
     def limpiar(self) -> None:
         shutil.rmtree(self.temporal, ignore_errors=True)
@@ -265,6 +267,8 @@ class Manejador(BaseHTTPRequestHandler):
             return self._json({"ruta": selector_nativo("folder" if datos.get("tipo") == "folder" else "file")})
         if ruta == "/api/export":
             return self._exportar(datos)
+        if ruta == "/api/cancel":
+            return self._cancelar(datos)
         return self._error(HTTPStatus.NOT_FOUND, "not found")
 
     def _subir(self, consulta: str) -> None:
@@ -320,6 +324,19 @@ class Manejador(BaseHTTPRequestHandler):
             objetivos.append((objetivo, None))
         if not objetivos:
             return self._error(HTTPStatus.BAD_REQUEST, "target")
+        with ESTADO.contador:
+            ESTADO.analizando += 1
+        try:
+            return self._ejecutar(objetivos, opciones, idioma)
+        except aimarkers.Cancelado:
+            return self._error(HTTPStatus.CONFLICT, "cancelled")
+        finally:
+            with ESTADO.contador:
+                ESTADO.analizando -= 1
+                if ESTADO.analizando == 0:
+                    aimarkers.anular_parada()  # una parada pedida sin análisis en curso no afecta al siguiente
+
+    def _ejecutar(self, objetivos: list, opciones, idioma: str) -> None:
         with ESTADO.cerrojo:  # el idioma es global en aimarkers: un análisis cada vez
             aimarkers.fijar_idioma(idioma)
             es_url = bool(re.match(r"https?://", objetivos[0][0], re.I))
@@ -339,6 +356,20 @@ class Manejador(BaseHTTPRequestHandler):
             while len(ESTADO.resultados) > MAX_RESULTADOS:
                 ESTADO.resultados.pop(next(iter(ESTADO.resultados)))
         return self._json({"id": ident, "resultados": salida})
+
+    def _cancelar(self, datos: dict) -> None:
+        """Detiene el análisis en curso y, si se indica, borra los ficheros de una subida interrumpida."""
+        lote = datos.get("lote")
+        if isinstance(lote, str) and re.fullmatch(r"[A-Za-z0-9_-]{8,64}", lote):
+            shutil.rmtree(ESTADO.temporal / lote, ignore_errors=True)
+            with ESTADO.cerrojo:
+                ESTADO.lote_bytes.pop(lote, None)
+                ESTADO.lote_ficheros.pop(lote, None)
+        with ESTADO.contador:
+            en_curso = ESTADO.analizando > 0
+            if en_curso:
+                aimarkers.pedir_parada()
+        return self._json({"detenido": en_curso})
 
     def _exportar(self, datos: dict) -> None:
         resultados = ESTADO.resultados.get(str(datos.get("id", "")))

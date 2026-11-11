@@ -126,7 +126,10 @@
           <div class="carga-cifra" aria-hidden="true"><span id="carga-porcentaje">0</span><small>%</small></div>
           <div class="carga-barra" id="carga-barra" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"
                data-i18n-aria="progreso-total"><i id="carga-relleno"></i></div>
-          <p class="carga-tiempo" id="carga-tiempo"></p>
+          <div class="carga-linea">
+            <p class="carga-tiempo" id="carga-tiempo"></p>
+            <button type="button" class="boton secundario con-icono parar" id="parar"><svg aria-hidden="true"><use href="/icon.svg#i-parar"></use></svg><span id="parar-texto" data-i18n="parar">Detener análisis</span></button>
+          </div>
           <p class="carga-detalle" id="progreso"></p>
           <ol class="carga-pasos" id="carga-pasos"></ol>
         </div>

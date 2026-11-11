@@ -146,7 +146,7 @@ python3 aimarkers.py --gui      # macOS / Linux desde la carpeta
 py aimarkers.py --gui           # Windows
 ```
 
-Se abre en el navegador. Mientras trabaja muestra el porcentaje total, una estimación del tiempo que queda, cada fase del análisis y, con palabras sencillas, qué está comprobando en cada momento. Arrastra ficheros, carpetas o imágenes a la ventana, escribe una ruta o una URL, o usa **Elegir archivo** / **Elegir carpeta** (el selector del sistema). Cada análisis queda en la lista lateral durante la sesión y puedes guardar el informe en HTML, Markdown o JSON. Tiene apariencia clara y oscura (o la del sistema) y cambia entre español e inglés. Para cerrarla, pulsa Ctrl+C en la terminal.
+Se abre en el navegador. Mientras trabaja muestra el porcentaje total, una estimación del tiempo que queda, cada fase del análisis y, con palabras sencillas, qué está comprobando en cada momento; **Detener análisis** lo cancela si lo has iniciado por error. Arrastra ficheros, carpetas o imágenes a la ventana, escribe una ruta o una URL, o usa **Elegir archivo** / **Elegir carpeta** (el selector del sistema). Cada análisis queda en la lista lateral durante la sesión y puedes guardar el informe en HTML, Markdown o JSON. Tiene apariencia clara y oscura (o la del sistema) y cambia entre español e inglés. Para cerrarla, pulsa Ctrl+C en la terminal.
 
 ![Interfaz gráfica de aimarkers](docs/gui-light.png)
 
