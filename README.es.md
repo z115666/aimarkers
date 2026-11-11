@@ -220,7 +220,7 @@ Qué lee depende del tipo de contenido:
 - **Código, texto y páginas web**: el propio contenido (declaraciones, huellas y rasgos) y, en las webs, la estructura del HTML y los datos embebidos. El estilo solo cuenta a partir de 150 palabras y por densidad, nunca por una palabra suelta.
 - **Imágenes**: primero sus metadatos (C2PA, IPTC, EXIF, textos PNG), que son lo único que puede dar una respuesta firme; después, si están instalados Pillow y NumPy, una [lectura de píxeles](#lectura-de-píxeles) que solo puede añadir indicios débiles o medios.
 - **Repositorios Git**: trailers y pies de los commits, autores bot, ramas de agentes y ficheros de instrucciones para agentes.
-- **Documentos de Office y PDF** (`.docx`, `.pdf`…): todavía no se leen. Exporta el texto a `.txt` o `.md` para analizarlo.
+- **Documentos de Office y PDF** (`.docx`, `.pptx`, `.xlsx`, `.odt`, `.odp`, `.ods`, `.pdf`): sus metadatos, su texto y las imágenes que llevan dentro. Ver [Documentos](#documentos-de-office-y-pdf).
 
 Un solo marcador explícito basta para decir que el contenido declara intervención de IA. Los rasgos por sí solos nunca pasan de «indicios débiles» o «probable asistencia», y la ausencia de marcadores no demuestra nada.
 
@@ -291,6 +291,29 @@ Una señal añade un marcador débil (3 puntos) y dos, uno medio (8 puntos); la 
 
 **Fiabilidad.** Los umbrales se ajustaron con 32 fotos reales (cámaras, COCO, PASCAL VOC e imágenes de prueba clásicas) y 29 imágenes generadas sueltas (Stable Diffusion 1.x, SDXL, FLUX, DALL·E 2 y ProGAN), también recomprimidas en JPEG con calidad 90. Con ellos, **ninguna foto real dio positivo** y **aproximadamente 1 de cada 4 imágenes generadas sí** (7–8 de 29). Por tanto, una lectura «normal» no significa que la imagen sea real. Es una muestra pequeña: tómalo como orientación. Los renders 3D y las fotos muy retocadas o con reducción de ruido pueden dar «sin ruido de sensor». Para una respuesta más firme, busca el original, comprueba sus credenciales C2PA o usa un detector entrenado con generadores recientes.
 
+### Documentos de Office y PDF
+
+Word, PowerPoint y Excel (`.docx`, `.pptx`, `.xlsx` y sus versiones con macros), LibreOffice (`.odt`, `.odp`, `.ods`) y PDF. De cada documento aimarkers lee:
+
+- **Metadatos**: aplicación, productor y propiedades personalizadas. Una herramienta de IA nombrada ahí (ChatGPT, Copilot, Gemini, Claude, Gamma, Beautiful.ai, Tome…) es un marcador fuerte, también como autora de un cambio o comentario. Las librerías con las que los asistentes crean ficheros desde código son un marcador medio: python-docx, python-pptx, openpyxl, XlsxWriter, PptxGenJS, docx, ReportLab, FPDF, pdf-lib, jsPDF, PDFKit, WeasyPrint, wkhtmltopdf y Chrome sin interfaz. Cualquier automatización las usa también, así que por sí solas no demuestran IA. Los nombres de autor nunca se copian al informe.
+- **Texto**: las mismas reglas que cualquier texto, más el **Markdown literal** (`### Título`, `**negrita**`, tablas con `|`), que en un Word o un PDF suele indicar que se pegó la respuesta de un chat.
+- **Imágenes incrustadas**, con el mismo análisis de metadatos y de píxeles que cualquier imagen. Una imagen de IA con credenciales C2PA dentro de una presentación se detecta.
+
+El texto de los PDF se lee con la biblioteca estándar cuando usan fuentes sencillas (como ReportLab). Con fuentes incrustadas, instala pypdf (`python3 -m pip install pypdf`) para analizar también el texto.
+
+### Capturas de pantalla
+
+aimarkers también busca capturas de pantalla falsas o editadas. Reconoce las capturas y los gráficos planos y, en ellos, hace estas comprobaciones:
+
+| Comprobación | Qué mira | Resultado |
+| --- | --- | --- |
+| Origen | Metadatos del programa que la hizo (macOS e iOS, GNOME, KDE Spectacle, ShareX, Greenshot, Flameshot, Recortes) o un nombre de fichero de captura | Contexto, no puntúa |
+| Tamaño de pantalla | Coincide con la pantalla de un móvil, tableta u ordenador reales | Contexto, no puntúa |
+| Tamaño de generador | Parece una captura, no mide como ninguna pantalla habitual, mide como la salida de un generador (ChatGPT entrega 1024×1536) y no declara programa de captura | Marcador medio |
+| Zonas pegadas | En una imagen sin pérdida (PNG, WebP sin pérdida, TIFF, BMP), zonas de 128 píxeles cuyos coeficientes DCT se agrupan en una rejilla de cuantización JPEG mientras el resto no. Indica más o menos dónde y el desplazamiento de esa rejilla JPEG | Una nota y la fila resaltada |
+
+Las zonas pegadas no puntúan como IA: apuntan a una edición y también pueden ser una foto que se veía en la pantalla. En pruebas con 19 capturas genuinas **no hubo ninguna falsa alarma**; con recortes de otras capturas pegados encima, encontró aproximadamente **1 de cada 3 pegados grandes** (600×400 px, JPEG con calidad 70–85) y muy pocos pequeños o de calidad alta. El texto cambiado en su sitio (inspector del navegador, programas de dibujo) no deja un rastro que pueda ver. Para confirmar una captura, compárala con el original o pide la fuente.
+
 ## Excluir ficheros
 
 Añade `aimarkers: ignore-file` en las primeras líneas de un fichero para que no se analice. Lo usa el propio `aimarkers.py`, que contiene todos los patrones que busca.
@@ -339,7 +362,8 @@ aimarkers está diseñado para analizar contenido no confiable. Invoca `git` con
 
 - No comprueba si el código usa APIs inventadas: eso exige ejecutarlo o revisarlo contra la documentación.
 - Sin metadatos, de una imagen solo puede dar indicios débiles o medios, y se le escapan la mayoría de las generadas (ver [lectura de píxeles](#lectura-de-píxeles)). No lee marcas de agua invisibles como SynthID.
-- Todavía no lee documentos de Office ni PDF.
+- Las zonas pegadas en capturas solo se encuentran si pasaron por JPEG y son grandes (aproximadamente 1 de cada 3 pegados de 600×400 px; los pequeños casi nunca). El texto editado en su sitio, con el inspector del navegador o un programa de dibujo, no deja un rastro que pueda ver.
+- En los PDF con fuentes incrustadas, el texto solo se puede leer con pypdf instalado; sin él, se analizan los metadatos y las imágenes.
 - La ausencia de marcadores no demuestra autoría humana: los trailers y pies se pueden borrar, los textos se pueden reescribir y los metadatos se pueden eliminar.
 - El análisis de seguridad es automático y no intrusivo: no sustituye a una auditoría ni a una prueba de intrusión, y su CVSS parte de vectores tipo que conviene revisar.
 - Las URLs que necesitan JavaScript para mostrar contenido se analizan solo por su HTML inicial. En ese caso, guarda la página desde el navegador y analiza el fichero.

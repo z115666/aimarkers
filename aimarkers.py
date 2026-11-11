@@ -47,7 +47,7 @@ from datetime import datetime, timezone
 from html.parser import HTMLParser
 from pathlib import Path
 
-VERSION = "1.6.0"
+VERSION = "1.7.0"
 
 # ---------------------------------------------------------------------------
 # Idioma / Language
@@ -101,6 +101,7 @@ TEXTOS: dict[str, tuple[str, str]] = {
     "tipo.texto": ("texto", "text"),
     "tipo.codigo": ("código", "code"),
     "tipo.imagen": ("imagen", "image"),
+    "tipo.documento": ("documento", "document"),
     "tipo.fichero": ("fichero", "file"),
     "tipo.desconocido": ("desconocido", "unknown"),
     # Interfaz
@@ -170,7 +171,43 @@ TEXTOS: dict[str, tuple[str, str]] = {
                             "{u}: the pixel reading shows unusual traits, but the image declares a camera ({c}) so it is not "
                             "scored. Camera data can be forged: if in doubt, look for the original."),
     "px.ubicacion": ("píxeles", "pixels"),
+    "doc.metadatos": ("metadatos", "metadata"),
+    "doc.campo.aplicacion": ("aplicación", "application"),
+    "doc.campo.productor": ("productor", "producer"),
+    "doc.campo.autor": ("autor", "author"),
+    "doc.campo.modificado_por": ("modificado por", "last modified by"),
+    "doc.campo.descripcion": ("descripción", "description"),
+    "doc.campo.palabras_clave": ("palabras clave", "keywords"),
+    "doc.campo.plantilla": ("plantilla", "template"),
+    "doc.campo.empresa": ("empresa", "company"),
+    "doc.campo.personalizadas": ("propiedades personalizadas", "custom properties"),
+    "doc.campo.revision": ("autor de un cambio o comentario", "author of a tracked change or comment"),
+    "ev.markdown_doc": ("{n} líneas con Markdown sin convertir, por ejemplo: {e}", "{n} lines of unconverted Markdown, for example: {e}"),
+    "nota.documento": ("{u}: {f} creado con {a}; {p} párrafos de texto y {i} imágenes incrustadas analizados.",
+                       "{u}: {f} created with {a}; {p} text paragraphs and {i} embedded images analysed."),
+    "nota.doc_invalido": ("{u}: no se ha podido leer el documento ({e}).", "{u}: the document could not be read ({e})."),
+    "nota.pdf_sin_texto": ("{u}: el texto del PDF usa fuentes incrustadas que no se pueden leer sin dependencias; se han analizado "
+                           "los metadatos y las imágenes. Instala pypdf (pip install pypdf) para analizar también el texto.",
+                           "{u}: the PDF text uses embedded fonts that cannot be read without dependencies; metadata and images "
+                           "were analysed. Install pypdf (pip install pypdf) to analyse the text too."),
+    "nota.pdf_cifrado": ("{u}: el PDF está cifrado; solo se han podido leer los datos sin cifrar.",
+                         "{u}: the PDF is encrypted; only unencrypted data could be read."),
     "px.titulo": ("Lectura de píxeles", "Pixel reading"),
+    "ev.captura_generador": ("{w}×{h}: parece una captura de pantalla, pero no mide como ninguna pantalla habitual y sí como la "
+                             "salida de un generador (ChatGPT, por ejemplo, entrega 1024×1536); tampoco declara programa de captura",
+                             "{w}×{h}: it looks like a screenshot, but it does not match any usual screen size and does match a "
+                             "generator output (ChatGPT, for example, delivers 1024×1536); it declares no screenshot tool either"),
+    "nota.zona_jpeg": ("{u}: en torno a la zona {x1},{y1} – {x2},{y2} hay contenido que pasó por compresión JPEG y el resto de la imagen no. Puede ser una foto "
+                       "que se veía en la pantalla o un recorte pegado encima: compárala con el original.",
+                       "{u}: around the area {x1},{y1} – {x2},{y2} there is content that went through JPEG compression and the rest of the image did not. It "
+                       "may be a photo shown on screen or a crop pasted on top: compare it with the original."),
+    "px.col_captura": ("Captura y edición", "Screenshot and editing"),
+    "px.cap_origen": ("captura de {o}", "{o} screenshot"),
+    "px.cap_nombre": ("nombre de captura", "screenshot file name"),
+    "px.cap_pantalla": ("tamaño de pantalla real", "real screen size"),
+    "px.cap_zona": ("zona JPEG en {x},{y}", "JPEG area at {x},{y}"),
+    "px.cap_completa": ("guardada antes como JPEG", "previously saved as JPEG"),
+    "px.cap_limpia": ("sin zonas pegadas", "no pasted areas"),
     "px.explicacion": ("Medidas sobre la propia imagen, no sobre sus metadatos. Umbrales conservadores: una foto real casi nunca "
                        "da positivo, pero muchas imágenes generadas tampoco. Un «normal» no demuestra que la imagen sea real.",
                        "Measurements on the image itself, not its metadata. Conservative thresholds: a real photo almost never "
@@ -354,6 +391,14 @@ DESCRIPCIONES: dict[str, tuple[str, str]] = {
     "carpeta-agente": ("Carpeta de configuración de agentes de IA", "Configuration folder for AI agents"),
     # Imágenes
     "c2pa-ia": ("Credenciales de contenido C2PA declaran generación con IA", "C2PA Content Credentials declare AI generation"),
+    "doc-herramienta-ia": ("Los metadatos del documento nombran una herramienta de IA",
+                           "The document metadata names an AI tool"),
+    "doc-generado-codigo": ("Documento generado por código con una librería que usan los asistentes",
+                            "Document generated by code with a library that assistants use"),
+    "markdown-en-documento": ("Markdown literal en el documento (texto pegado desde un chat)",
+                              "Literal Markdown in the document (text pasted from a chat)"),
+    "captura-tamano-generador": ("Captura de pantalla con el tamaño de salida de un generador de imágenes",
+                                 "Screenshot with the output size of an image generator"),
     "pixeles-varias-senales": ("Varias lecturas de píxeles compatibles con imagen sintética",
                                "Several pixel readings consistent with a synthetic image"),
     "pixeles-una-senal": ("Una lectura de píxeles compatible con imagen sintética", "One pixel reading consistent with a synthetic image"),
@@ -466,6 +511,7 @@ EXT_CODIGO = {
 }
 EXT_TEXTO = {".md", ".markdown", ".txt", ".rst", ".adoc", ".org", ".tex"}
 EXT_HTML = {".html", ".htm", ".xhtml"}
+EXT_DOCUMENTO = {".docx", ".docm", ".pptx", ".pptm", ".xlsx", ".xlsm", ".odt", ".odp", ".ods", ".pdf"}
 EXT_IMAGEN = {".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif", ".avif", ".tif", ".tiff", ".jxl", ".gif", ".dng"}
 
 DIRS_IGNORADOS = {
@@ -1404,9 +1450,15 @@ def analizar_pixeles(res: Resultado, d: bytes, ubic: str, meta: dict, avisos: se
     if _PIXELES["activo"] and not con_pixeles and "pixeles" not in avisos:
         avisos.add("pixeles")
         res.notas.append(t("nota.pixeles_no"))
-    lectura = px.lectura(d, meta["exif"], con_pixeles)
+    lectura = px.lectura(d, meta["exif"], con_pixeles, ubic)
     if len(res.lecturas) < 200:
         res.lecturas.append({"ubicacion": ubic, **lectura})
+    captura = lectura["captura"]
+    for zona in captura["zonas_jpeg"]:
+        res.notas.append(t("nota.zona_jpeg", u=ubic, x1=zona["x1"], y1=zona["y1"], x2=zona["x2"], y2=zona["y2"]))
+    if captura["parece_captura"] and lectura["resolucion_generador"] and not captura["pantalla"] and not captura["origen"] \
+            and not lectura["camara"]:
+        res.anadir("captura-tamano-generador", "medio", ubic, t("ev.captura_generador", w=lectura["ancho"], h=lectura["alto"]))
     senales = lectura["senales"]
     if not ("ruido" in senales or "periodico" in senales):
         return  # la resolución sola no basta: muchas fotos reales miden 512×512 o 1024×1024
@@ -1791,10 +1843,58 @@ def comprobar_ficheros_agente(res: Resultado, raiz: Path, rutas: Iterable[Path])
             res.anadir("fichero-agente", "fuerte", str(rel), f"{nombre} → {herramienta}")
 
 
+def analizar_documento(res: Resultado, datos: bytes, ubic: str, avisos: set[str]) -> None:
+    """Word, PowerPoint, Excel, LibreOffice y PDF: metadatos, texto e imágenes incrustadas."""
+    import aimarkers_documentos as docs
+    try:
+        doc = docs.leer(ubic, datos)
+    except docs.DocumentoInvalido as e:
+        res.notas.append(t("nota.doc_invalido", u=ubic, e=str(e)[:80]))
+        return
+    res.ficheros_analizados += 1
+    meta = doc["meta"]
+    herramientas, librerias = docs.huellas(meta, doc["autores_revision"])
+    for campo, valor in herramientas:
+        res.anadir("doc-herramienta-ia", "fuerte", f"{ubic}:{t('doc.metadatos')}", f"{t('doc.campo.' + campo)}: {valor}")
+    for nombre, evidencia in librerias:
+        res.anadir("doc-generado-codigo", "medio", f"{ubic}:{t('doc.metadatos')}", f"{nombre} · {evidencia}")
+    lineas = [linea for _, parrafos in doc["partes"] for linea in parrafos]
+    texto = "\n".join(lineas)[:docs.MAX_TEXTO]
+    if texto:
+        analizar_texto(res, texto, ubic)
+        markdown = docs.restos_markdown(lineas)
+        if len(markdown) >= 2:
+            res.anadir("markdown-en-documento", "medio", f"{ubic}:{markdown[0][0]}",
+                       t("ev.markdown_doc", n=len(markdown), e=markdown[0][1][:90]))
+    programa = meta.get("aplicacion") or meta.get("productor") or "—"
+    if doc["formato"] == "pdf" and meta.get("productor") and meta.get("productor") != programa:
+        programa += f" / {meta['productor']}"
+    res.notas.append(t("nota.documento", u=ubic, f=doc["formato"].upper(), a=programa[:120], p=len(lineas),
+                       i=len(doc["imagenes"])))
+    if doc["formato"] == "pdf" and not doc.get("texto_legible") and "pypdf" not in avisos:
+        avisos.add("pypdf")
+        res.notas.append(t("nota.pdf_sin_texto", u=ubic))
+    if doc.get("cifrado"):
+        res.notas.append(t("nota.pdf_cifrado", u=ubic))
+    for nombre, contenido in doc["imagenes"]:
+        analizar_imagen(res, contenido, f"{ubic}/{nombre}", None, avisos)
+
+
 def analizar_fichero(res: Resultado, ruta: Path, ubic: str, avisos: set[str]) -> None:
     ext = ruta.suffix.lower()
     if ext in EXT_IMAGEN:
         analizar_fichero_imagen(res, ruta, ubic, avisos)
+        return
+    if ext in EXT_DOCUMENTO:
+        import aimarkers_documentos as docs
+        try:
+            if ruta.stat().st_size > docs.MAX_FICHERO:
+                res.notas.append(t("nota.doc_invalido", u=ubic, e="> 60 MB"))
+                return
+            datos = ruta.read_bytes()
+        except OSError:
+            return
+        analizar_documento(res, datos, ubic, avisos)
         return
     texto = leer_fichero(ruta)
     if texto is None:
@@ -1911,7 +2011,7 @@ def analizar_objetivo(objetivo: str, imagenes_web: bool = True, opciones=None) -
     if ruta.is_file():
         ext = ruta.suffix.lower()
         tipo = ("html" if ext in EXT_HTML else "texto" if ext in EXT_TEXTO else "codigo" if ext in EXT_CODIGO
-                else "imagen" if ext in EXT_IMAGEN else "fichero")
+                else "imagen" if ext in EXT_IMAGEN else "documento" if ext in EXT_DOCUMENTO else "fichero")
         res = Resultado(str(ruta), tipo)
         res.solo_seguridad = solo
         if not solo:
@@ -2014,8 +2114,20 @@ def tabla_pixeles(res: Resultado) -> list[dict]:
         tamano = f"{lec['ancho']}×{lec['alto']}" if lec["ancho"] else "—"
         if lec["resolucion_generador"]:
             tamano += " · " + t("px.habitual")
+        cap = lec.get("captura") or {}
+        partes = []
+        if cap.get("origen"):
+            partes.append(t("px.cap_nombre") if cap["origen"] == "nombre" else t("px.cap_origen", o=cap["origen"]))
+        if cap.get("pantalla"):
+            partes.append(t("px.cap_pantalla"))
+        partes += [t("px.cap_zona", x=z["x1"], y=z["y1"]) for z in cap.get("zonas_jpeg", [])[:3]]
+        if cap.get("jpeg_completa"):
+            partes.append(t("px.cap_completa"))
+        elif cap.get("analizada") and not cap.get("zonas_jpeg") and cap.get("parece_captura"):
+            partes.append(t("px.cap_limpia"))
         filas.append({"ubicacion": lec["ubicacion"], "ruido": ruido, "periodico": periodico, "tamano": tamano,
-                      "camara": lec["camara"], "alerta": bool(senales & {"ruido", "periodico"}) and not lec["camara"]})
+                      "captura": " · ".join(partes) or "—", "camara": lec["camara"],
+                      "alerta": (bool(senales & {"ruido", "periodico"}) and not lec["camara"]) or bool(cap.get("zonas_jpeg"))})
     return filas
 
 
@@ -2024,10 +2136,11 @@ def _pixeles_md(res: Resultado) -> list[str]:
     if not filas:
         return []
     md = [f"**{t('px.titulo')}**", "", t("px.explicacion"), "",
-          f"| {t('px.col_imagen')} | {t('px.col_ruido')} | {t('px.col_periodico')} | {t('px.col_tamano')} |", "| --- | --- | --- | --- |"]
+          f"| {t('px.col_imagen')} | {t('px.col_ruido')} | {t('px.col_periodico')} | {t('px.col_tamano')} | {t('px.col_captura')} |",
+          "| --- | --- | --- | --- | --- |"]
     for f in filas:
         camara = f" ({t('px.camara', c=f['camara'])})" if f["camara"] else ""
-        md.append(f"| `{f['ubicacion']}`{html.escape(camara)} | {f['ruido']} | {f['periodico']} | {f['tamano']} |")
+        md.append(f"| `{f['ubicacion']}`{html.escape(camara)} | {f['ruido']} | {f['periodico']} | {f['tamano']} | {f['captura']} |")
     return md + [""]
 
 
@@ -2039,10 +2152,11 @@ def _pixeles_html(res: Resultado) -> str:
     cuerpo = "".join(
         f"<tr{' class=alerta' if f['alerta'] else ''}><td><code>{e(f['ubicacion'])}</code>"
         + (f"<br><small>{e(t('px.camara', c=f['camara']))}</small>" if f["camara"] else "")
-        + f"</td><td>{e(f['ruido'])}</td><td>{e(f['periodico'])}</td><td>{e(f['tamano'])}</td></tr>" for f in filas)
+        + f"</td><td>{e(f['ruido'])}</td><td>{e(f['periodico'])}</td><td>{e(f['tamano'])}</td><td>{e(f['captura'])}</td></tr>"
+        for f in filas)
     return (f"<details class='pixeles'><summary>{e(t('px.titulo'))}</summary><p>{e(t('px.explicacion'))}</p>"
             f"<table><thead><tr><th>{e(t('px.col_imagen'))}</th><th>{e(t('px.col_ruido'))}</th><th>{e(t('px.col_periodico'))}</th>"
-            f"<th>{e(t('px.col_tamano'))}</th></tr></thead><tbody>{cuerpo}</tbody></table></details>")
+            f"<th>{e(t('px.col_tamano'))}</th><th>{e(t('px.col_captura'))}</th></tr></thead><tbody>{cuerpo}</tbody></table></details>")
 
 
 def informe_markdown(resultados: list[Resultado], max_ev: int) -> str:

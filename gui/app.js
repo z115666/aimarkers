@@ -39,7 +39,7 @@ const TEXTOS = {
     "fase-activo": "Rutas sensibles (modo activo)", "fase-codigo": "Seguridad del código",
     "fase-dependencias": "Dependencias vulnerables (OSV.dev)",
     "px-titulo": "Lectura de píxeles", "px-imagen": "Imagen", "px-ruido": "Ruido de sensor", "px-periodico": "Huella periódica",
-    "px-tamano": "Tamaño", "i-pixeles": "Píxeles",
+    "px-tamano": "Tamaño", "i-pixeles": "Píxeles", "px-captura": "Captura y edición",
     "px-ayuda": "Medidas sobre la propia imagen, no sobre sus metadatos. Umbrales conservadores: una foto real casi nunca da positivo, pero muchas imágenes generadas tampoco.",
     "volver-inicio": "Volver al inicio",
     "resumen": "Resumen", "resumen-analisis": "Resumen del análisis", "l-ia": "Marcadores de IA", "en-esta-pagina": "En esta página",
@@ -151,7 +151,7 @@ const TEXTOS = {
     "fase-activo": "Sensitive paths (active mode)", "fase-codigo": "Code security",
     "fase-dependencias": "Vulnerable dependencies (OSV.dev)",
     "px-titulo": "Pixel reading", "px-imagen": "Image", "px-ruido": "Sensor noise", "px-periodico": "Periodic trace",
-    "px-tamano": "Size", "i-pixeles": "Pixels",
+    "px-tamano": "Size", "i-pixeles": "Pixels", "px-captura": "Screenshot and editing",
     "px-ayuda": "Measurements on the image itself, not its metadata. Conservative thresholds: a real photo almost never triggers them, but many generated images do not either.",
     "volver-inicio": "Back to start",
     "resumen": "Summary", "resumen-analisis": "Analysis summary", "l-ia": "AI markers", "en-esta-pagina": "On this page",
@@ -924,7 +924,7 @@ function pintarPixeles(r) {
     const celda = el("td");
     celda.append(el("code", null, f.ubicacion));
     if (f.camara) celda.append(el("small", null, f.camara));
-    fila.append(celda, el("td", null, f.ruido), el("td", null, f.periodico), el("td", null, f.tamano));
+    fila.append(celda, el("td", null, f.ruido), el("td", null, f.periodico), el("td", null, f.tamano), el("td", null, f.captura));
     filas.append(fila);
   }
   $("r-pixeles").hidden = !(r.pixeles || []).length || Boolean(r.solo_seguridad && r.seguridad);

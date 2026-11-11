@@ -21,6 +21,7 @@ solo la biblioteca estándar. Autor: Alberto
 from __future__ import annotations
 
 import io
+import re
 import struct
 
 # Umbrales calibrados con 32 fotos reales y 29 imágenes generadas (SD 1.x, SDXL, FLUX, DALL·E 2, ProGAN):
@@ -39,6 +40,56 @@ RESOLUCIONES_GENERADOR = {frozenset(p) if p[0] != p[1] else frozenset([p[0]]) fo
     (512, 512), (512, 768), (768, 768), (1024, 1024), (2048, 2048), (1152, 896), (1216, 832), (1344, 768),
     (1536, 640), (1024, 1792), (1536, 1024), (1456, 816), (1232, 928), (1344, 896), (1664, 928), (1408, 768),
     (1280, 896), (1248, 832), (1184, 864), (1536, 672), (1360, 768), (1440, 1440)]}
+
+
+# Resoluciones de pantalla de móviles, tabletas y ordenadores habituales (sin orden de ancho y alto)
+PANTALLAS = {frozenset(p) for p in [
+    # iPhone
+    (640, 1136), (750, 1334), (828, 1792), (1080, 1920), (1125, 2436), (1170, 2532), (1179, 2556), (1206, 2622),
+    (1242, 2208), (1242, 2688), (1284, 2778), (1290, 2796), (1320, 2868), (1080, 2340), (1260, 2736),
+    # iPad
+    (1536, 2048), (1620, 2160), (1640, 2360), (1668, 2224), (1668, 2388), (2048, 2732), (1488, 2266), (2064, 2752),
+    # Android
+    (720, 1280), (720, 1520), (720, 1600), (1080, 2160), (1080, 2220), (1080, 2280), (1080, 2310), (1080, 2400),
+    (1080, 2408), (1080, 2412), (1080, 2424), (1440, 2560), (1440, 2960), (1440, 3040), (1440, 3088), (1440, 3120),
+    (1440, 3200), (1344, 2992), (1280, 2856), (1220, 2712), (1260, 2800), (1116, 2484), (1240, 2772),
+    # Ordenadores
+    (1280, 720), (1280, 800), (1366, 768), (1440, 900), (1536, 864), (1600, 900), (1680, 1050), (1920, 1080),
+    (1920, 1200), (2560, 1440), (2560, 1600), (2560, 1664), (2880, 1800), (2940, 1912), (3024, 1964), (3456, 2234),
+    (3840, 2160), (2736, 1824), (2256, 1504), (2880, 1920), (3000, 2000), (5120, 2880), (3440, 1440)]}
+
+RE_CAPTURA_META = [
+    ("macOS / iOS", re.compile(rb"<exif:UserComment>\s*(?:<rdf:Alt>\s*<rdf:li[^>]*>)?\s*Screenshot", 2)),
+    ("GNOME", re.compile(rb"gnome-screenshot", 2)),
+    ("KDE Spectacle", re.compile(rb"spectacle", 2)),
+    ("ShareX", re.compile(rb"sharex", 2)),
+    ("Greenshot", re.compile(rb"greenshot", 2)),
+    ("Flameshot", re.compile(rb"flameshot", 2)),
+    ("Snipping Tool", re.compile(rb"snipping ?tool|snip & sketch|recortes", 2)),
+]
+RE_CAPTURA_NOMBRE = re.compile(
+    r"screen ?shot|captura|pantallazo|screen_?\d|scr_\d|snip|recorte|whatsapp image", 2)
+
+
+def origen_captura(d: bytes, nombre: str) -> str:
+    """Programa o sistema que hizo la captura, según sus metadatos o su nombre de fichero."""
+    cabecera = d[:300_000]
+    for origen, patron in RE_CAPTURA_META:
+        if patron.search(cabecera):
+            return origen
+    if RE_CAPTURA_NOMBRE.search(nombre.rsplit("/", 1)[-1]):
+        return "nombre"
+    return ""
+
+
+def es_pantalla(tam: tuple[int, int] | None) -> bool:
+    return bool(tam) and frozenset(tam) in PANTALLAS
+
+
+def sin_perdida(d: bytes) -> bool:
+    """PNG, WebP sin pérdida, TIFF o BMP: formatos en los que no debería haber rastro de JPEG."""
+    return (d[:8] == b"\x89PNG\r\n\x1a\n" or (d[:4] == b"RIFF" and d[8:16] == b"WEBPVP8L")
+            or d[:4] in (b"II*\x00", b"MM\x00*") or d[:2] == b"BM")
 
 
 def disponible() -> bool:
@@ -156,6 +207,85 @@ def _ruido(np, r, lado: int = 16) -> tuple[float, float]:
     return float(np.percentile(desviaciones, 50)), float(np.percentile(desviaciones, 10))
 
 
+# ---------------------------------------------------------------------------
+# Rastros de JPEG dentro de una imagen sin pérdida (recortes pegados en capturas)
+# ---------------------------------------------------------------------------
+
+UMBRAL_ZONA_JPEG = 0.88   # capturas genuinas: ≤ 0,76 en las pruebas; recortes pegados: ≥ 0,96
+LADO_TESELA = 128
+MIN_COEFICIENTES = 24   # coeficientes con valor por posición DCT para puntuarla
+MIN_POSICIONES = 4      # posiciones DCT puntuables para puntuar la tesela
+MAX_PIXELES_COMPOSICION = 6_000_000
+CANDIDATOS = 3
+_POSICIONES = [(0, 1), (1, 0), (1, 1), (0, 2), (2, 0), (1, 2), (2, 1), (0, 3), (3, 0)]
+
+
+def _matriz_dct(np):
+    k, i = np.arange(8)[:, None], np.arange(8)[None, :]
+    c = np.cos(np.pi * (2 * i + 1) * k / 16) * np.sqrt(2 / 8)
+    c[0] /= np.sqrt(2)
+    return c
+
+
+def _puntuar_tesela(np, c, t) -> float:
+    """Cuánto se agrupan los coeficientes DCT de una tesela en múltiplos de un paso de cuantización (huella de JPEG)."""
+    por = t.shape[0] // 8
+    bloques = (t - 128).reshape(por, 8, por, 8).transpose(0, 2, 1, 3)
+    d = c @ bloques @ c.T                                     # DCT 8×8 de cada bloque
+    pasos = np.arange(3, 41, dtype=float)
+    esperado = np.minimum(1, 1.5 / pasos)
+    puntos = []
+    for y, x in _POSICIONES:
+        coef = d[:, :, y, x].ravel()
+        coef = coef[np.abs(coef) > 2.0]
+        if len(coef) < MIN_COEFICIENTES:
+            continue
+        cerca = np.abs(coef[:, None] - pasos * np.round(coef[:, None] / pasos)) < 0.75
+        puntos.append(float(((cerca.mean(0) - esperado) / (1 - esperado)).max()))
+    return float(np.median(puntos)) if len(puntos) >= MIN_POSICIONES else -1.0
+
+
+def _desplazamientos_rejilla(np, t) -> set[tuple[int, int]]:
+    """Desplazamientos (dx, dy) candidatos de la rejilla de 8 px: donde más se concentran los saltos entre bloques."""
+    dh = np.abs(np.diff(t, axis=1)).mean(0)            # salto entre la columna j y j+1
+    dv = np.abs(np.diff(t, axis=0)).mean(1)
+    perfil_x = np.array([dh[(np.arange(len(dh)) + 1) % 8 == k].mean() for k in range(8)])
+    perfil_y = np.array([dv[(np.arange(len(dv)) + 1) % 8 == k].mean() for k in range(8)])
+    return {(int(x), int(y)) for x in np.argsort(-perfil_x)[:CANDIDATOS] for y in np.argsort(-perfil_y)[:CANDIDATOS]} | {(0, 0)}
+
+
+def zonas_jpeg(np, g) -> dict:
+    """Teselas de 128 px cuyo contenido pasó por JPEG, con el desplazamiento de su rejilla."""
+    h, w = g.shape
+    origen = (0, 0)
+    if h * w > MAX_PIXELES_COMPOSICION:  # recorte central para acotar el tiempo
+        escala = (MAX_PIXELES_COMPOSICION / (h * w)) ** 0.5
+        nh, nw = int(h * escala), int(w * escala)
+        origen = ((w - nw) // 2, (h - nh) // 2)
+        g = g[origen[1]:origen[1] + nh, origen[0]:origen[0] + nw]
+        h, w = g.shape
+    c = _matriz_dct(np)
+    lado = LADO_TESELA
+    con_textura, marcadas = 0, []
+    paso = lado // 2  # teselas solapadas: un recorte pegado no tiene por qué caer alineado con ellas
+    for y0 in range(0, h - lado - 8 + 1, paso):
+        for x0 in range(0, w - lado - 8 + 1, paso):
+            zona = g[y0:y0 + lado + 8, x0:x0 + lado + 8]
+            if zona.std() < 2:  # lisa: sin información
+                continue
+            mejor, rejilla = -1.0, (0, 0)
+            for dx, dy in _desplazamientos_rejilla(np, zona):
+                valor = _puntuar_tesela(np, c, zona[dy:dy + lado, dx:dx + lado])
+                if valor > mejor:
+                    mejor, rejilla = valor, (dx, dy)
+            if mejor > -1:
+                con_textura += 1
+            if mejor >= UMBRAL_ZONA_JPEG:
+                marcadas.append({"x": origen[0] + x0 + rejilla[0], "y": origen[1] + y0 + rejilla[1],
+                                 "puntuacion": round(mejor, 2), "rejilla": rejilla})
+    return {"teselas": con_textura, "marcadas": marcadas}
+
+
 def medir(d: bytes) -> dict | None:
     """Lecturas de píxeles de la imagen, o None si no se puede decodificar."""
     import numpy as np
@@ -183,14 +313,75 @@ def medir(d: bytes) -> dict | None:
             "periodico": round(_pico_periodico(np, r), 2), "plano": round(plano, 2)}
 
 
-def lectura(d: bytes, bloques_exif: list[bytes], con_pixeles: bool) -> dict:
+def _gris_completo(d: bytes):
+    """Imagen entera en escala de grises (recortada al centro si es muy grande), o None."""
+    import numpy as np
+    from PIL import Image
+    Image.MAX_IMAGE_PIXELS = MAX_PIXELES
+    try:
+        with Image.open(io.BytesIO(d)) as imagen:
+            w, h = imagen.size
+            if w * h > MAX_PIXELES_COMPOSICION:
+                escala = (MAX_PIXELES_COMPOSICION / (w * h)) ** 0.5
+                nw, nh = int(w * escala), int(h * escala)
+                x0, y0 = (w - nw) // 2, (h - nh) // 2
+                recorte = imagen.convert("RGB").crop((x0, y0, x0 + nw, y0 + nh))
+                desplazamiento = (x0, y0)
+            else:
+                recorte, desplazamiento = imagen, (0, 0)
+            return np.asarray(recorte.convert("L"), dtype=np.float64), desplazamiento
+    except (OSError, ValueError, Image.DecompressionBombError, SyntaxError):
+        return None
+
+
+def _agrupar(marcadas: list[dict]) -> list[dict]:
+    """Une teselas marcadas que se tocan y tienen la misma rejilla en rectángulos."""
+    grupos: list[dict] = []
+    for m in marcadas:
+        x1, y1, x2, y2 = m["x"], m["y"], m["x"] + LADO_TESELA, m["y"] + LADO_TESELA
+        for g in grupos:
+            if g["rejilla"] == m["rejilla"] and x1 <= g["x2"] and x2 >= g["x1"] and y1 <= g["y2"] and y2 >= g["y1"]:
+                g.update(x1=min(g["x1"], x1), y1=min(g["y1"], y1), x2=max(g["x2"], x2), y2=max(g["y2"], y2),
+                         puntuacion=max(g["puntuacion"], m["puntuacion"]))
+                break
+        else:
+            grupos.append({"x1": x1, "y1": y1, "x2": x2, "y2": y2, "rejilla": m["rejilla"], "puntuacion": m["puntuacion"]})
+    return grupos[:8]
+
+
+def lectura_captura(d: bytes, nombre: str, tam, grafico: bool, con_pixeles: bool) -> dict:
+    """Lectura propia de capturas de pantalla: origen, tamaño de pantalla y zonas que pasaron por JPEG."""
+    salida = {"origen": origen_captura(d, nombre), "pantalla": es_pantalla(tam), "parece_captura": grafico,
+              "sin_perdida": sin_perdida(d), "zonas_jpeg": [], "jpeg_completa": False, "analizada": False}
+    salida["parece_captura"] = grafico or bool(salida["origen"]) or salida["pantalla"]
+    if con_pixeles and salida["sin_perdida"] and tam and min(tam) >= LADO_TESELA + 8:
+        import numpy as np
+        gris = _gris_completo(d)
+        if gris is not None:
+            resultado = zonas_jpeg(np, gris[0])
+            salida["analizada"] = True
+            marcadas = resultado["marcadas"]
+            if marcadas and resultado["teselas"] and len(marcadas) / resultado["teselas"] >= 0.5:
+                salida["jpeg_completa"] = True  # toda la imagen pasó por JPEG antes: no apunta a un pegado
+            else:
+                dx, dy = gris[1]
+                for m in marcadas:
+                    m["x"] += dx
+                    m["y"] += dy
+                salida["zonas_jpeg"] = _agrupar(marcadas)
+    return salida
+
+
+def lectura(d: bytes, bloques_exif: list[bytes], con_pixeles: bool, nombre: str = "") -> dict:
     """Todas las lecturas y la conclusión: señales que apuntan a imagen sintética."""
     tam = dimensiones(d)
     salida = {"ancho": tam[0] if tam else None, "alto": tam[1] if tam else None,
               "resolucion_generador": resolucion_generador(tam), "camara": camara_exif(bloques_exif),
-              "pixeles": None, "senales": []}
+              "pixeles": None, "senales": [], "captura": None}
     if con_pixeles:
         salida["pixeles"] = medir(d)
+    grafico = (salida["pixeles"] or {}).get("motivo") == "grafico"
+    salida["captura"] = lectura_captura(d, nombre, tam, grafico, con_pixeles)
     p = salida["pixeles"] or {}
     if p.get("aplicable"):
         if p["ruido_mediana"] < UMBRAL_RUIDO_MEDIANA and p["ruido_p10"] < UMBRAL_RUIDO_P10:

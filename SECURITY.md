@@ -6,6 +6,7 @@
 
 | Version | Supported |
 | --- | --- |
+| 1.7.x | Yes |
 | 1.6.x | Yes |
 | 1.5.x | Yes |
 | 1.4.x | Yes |
@@ -39,6 +40,7 @@ aimarkers is meant to analyse **untrusted** content: third-party repositories, w
 | Misuse of the active security mode against third parties | Off by default; requires `--active` and an explicit `--authorized` declaration (a confirmation box in the interface). It only requests well-known paths: no injection payloads, credentials or exploits |
 | Leaking secrets found during the analysis | Keys and tokens are shown truncated in reports; passwords in database URLs are replaced with `•••` |
 | Decoding images for the pixel reading | Optional and only if Pillow and NumPy are installed. Pillow's limit is set to 50 megapixels (decompression bombs are rejected), only a 1024×1024 crop is converted to numbers, and any decoding error just skips the reading. Keep Pillow up to date: it is the part that parses untrusted image data |
+| Reading Office documents and PDF | ZIP containers: at most 5,000 entries, 120 MB uncompressed in total, 30 MB per part and a 200:1 compression ratio per entry (zip bombs are skipped); encrypted entries are ignored. The XML is read with regular expressions, never with a parser that expands entities. PDF: at most 400 streams, 60 MB per file and the same decompression limits. pypdf is optional; if installed, it is only used to extract text and any error is ignored |
 | Queries to OSV.dev | Fixed HTTPS address (`api.osv.dev`), 20 s timeout, responses limited to 8 MB and validated as JSON; advisory IDs are checked against a strict pattern before being used in a URL; at most 3,000 packages and 200 advisories per analysis; a failure only adds a note |
 | Report injection | The HTML report escapes all analysed content and contains no scripts; Markdown escapes HTML and pipes |
 | Supply chain | No required runtime dependencies (standard library only; Pillow and NumPy are optional). GitHub Actions pinned by commit hash and development tools installed with `--require-hashes`. The Homebrew formula points to a specific commit with its SHA-256 |

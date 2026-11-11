@@ -4,6 +4,12 @@
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [semantic versioning](https://semver.org/).
 
+## [1.7.0] - 2026-11-11
+
+### Added
+- Office documents and PDF: Word, PowerPoint, Excel, LibreOffice and PDF files are analysed. aimarkers reads their metadata (AI tools, and libraries that assistants use to create files such as python-docx, python-pptx, openpyxl, PptxGenJS and ReportLab), their text (with the usual rules plus literal Markdown pasted from a chat) and the images inside them. Standard library only, with limits against zip and PDF bombs; pypdf is optional for PDFs with embedded fonts.
+- Screenshots: origin from metadata or file name, real screen size, a medium marker for screenshots with a generator output size (such as ChatGPT's 1024×1536) and no screenshot tool, and detection of areas that went through JPEG inside a lossless screenshot (pasted crops). New "Screenshot and editing" column in the pixel reading.
+
 ## [1.6.0] - 2026-11-11
 
 ### Added

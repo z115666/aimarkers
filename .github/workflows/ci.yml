@@ -31,7 +31,7 @@ jobs:
       - name: Ruff
         run: ruff check --output-format=github .
       - name: Bandit
-        run: bandit -c pyproject.toml -r aimarkers.py aimarkers_gui.py aimarkers_web.py aimarkers_seguridad.py aimarkers_dependencias.py aimarkers_pixeles.py cvss4.py
+        run: bandit -c pyproject.toml -r aimarkers.py aimarkers_gui.py aimarkers_web.py aimarkers_seguridad.py aimarkers_dependencias.py aimarkers_documentos.py aimarkers_pixeles.py cvss4.py
 
   pruebas:
     name: Tests (${{ matrix.os }}, Python ${{ matrix.python }})

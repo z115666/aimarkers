@@ -220,7 +220,7 @@ What it reads depends on the type of content:
 - **Code, text and web pages**: the content itself (declarations, fingerprints and traits) and, on websites, the HTML structure and embedded data. Writing style only counts above 150 words and by density, never for a single word.
 - **Images**: first their metadata (C2PA, IPTC, EXIF, PNG text), which is the only thing that can give a firm answer; then, if Pillow and NumPy are installed, a [pixel reading](#pixel-reading) that can only add weak or medium signs.
 - **Git repositories**: commit trailers and footers, bot authors, agent branches and agent instruction files.
-- **Office documents and PDF** (`.docx`, `.pdf`…): not read yet. Export the text to `.txt` or `.md` to analyse it.
+- **Office documents and PDF** (`.docx`, `.pptx`, `.xlsx`, `.odt`, `.odp`, `.ods`, `.pdf`): their metadata, their text and the images inside them. See [Documents](#office-documents-and-pdf).
 
 A single explicit marker is enough to say the content declares AI involvement. Traits on their own only ever reach "weak signs" or "likely assistance", and the absence of markers proves nothing.
 
@@ -291,6 +291,29 @@ One signal adds a weak marker (3 points) and two add a medium one (8 points); th
 
 **How reliable it is.** The thresholds were set on 32 real photos (cameras, COCO, PASCAL VOC and classic test images) and 29 single generated images (Stable Diffusion 1.x, SDXL, FLUX, DALL·E 2 and ProGAN), also recompressed as JPEG at quality 90. With them, **no real photo was flagged** and **about 1 in 4 generated images was** (7–8 of 29). A "normal" reading therefore does not mean the image is real. It is a small sample: take it as an indication. CGI renders and heavily retouched or denoised photos can show "no sensor noise". For a firmer answer, look for the original, check its C2PA credentials, or use a detector trained on recent generators.
 
+### Office documents and PDF
+
+Word, PowerPoint and Excel (`.docx`, `.pptx`, `.xlsx` and their macro versions), LibreOffice (`.odt`, `.odp`, `.ods`) and PDF. For each document aimarkers reads:
+
+- **Metadata**: application, producer and custom properties. An AI tool named there (ChatGPT, Copilot, Gemini, Claude, Gamma, Beautiful.ai, Tome…) is a strong marker, also as the author of a tracked change or comment. Libraries that assistants use to create files from code are a medium marker: python-docx, python-pptx, openpyxl, XlsxWriter, PptxGenJS, docx, ReportLab, FPDF, pdf-lib, jsPDF, PDFKit, WeasyPrint, wkhtmltopdf and headless Chrome. Any automation uses them too, so on their own they do not prove AI. Author names are never copied into the report.
+- **Text**: the same rules as any text, plus **literal Markdown** (`### Heading`, `**bold**`, `|` tables), which in a Word or PDF file usually means a chat answer was pasted in.
+- **Embedded images**, with the same metadata and pixel analysis as any image. An AI image with C2PA credentials inside a presentation is found.
+
+PDF text is read with the standard library when the PDF uses simple fonts (as ReportLab does). With embedded fonts, install pypdf (`python3 -m pip install pypdf`) to analyse the text too.
+
+### Screenshots
+
+aimarkers also looks for fake or edited screenshots. It recognises screenshots and flat graphics and, on them, runs these checks:
+
+| Check | What it looks at | Result |
+| --- | --- | --- |
+| Origin | Metadata of the tool that took it (macOS and iOS, GNOME, KDE Spectacle, ShareX, Greenshot, Flameshot, Snipping Tool) or a screenshot-like file name | Context, not scored |
+| Screen size | Matches a real phone, tablet or computer screen | Context, not scored |
+| Generator size | Looks like a screenshot, matches no usual screen, matches a generator output (ChatGPT delivers 1024×1536) and declares no screenshot tool | Medium marker |
+| Pasted areas | In a lossless image (PNG, lossless WebP, TIFF, BMP), 128-pixel areas whose DCT coefficients cluster on a JPEG quantisation grid while the rest do not. It shows roughly where, and the offset of that JPEG grid | A note and a highlighted row |
+
+Pasted areas are not scored as AI: they point to editing, and they can also be a photo that was on screen. In tests with 19 genuine screenshots there were **no false alarms**; with crops of other screenshots pasted on top, it found about **1 in 3 large pastes** (600×400 px, JPEG quality 70–85) and very few small or high-quality ones. Text changed in place (browser inspector, paint tools) leaves no trace it can see. To confirm a screenshot, compare it with the original or ask for the source.
+
 ## Excluding files
 
 Add `aimarkers: ignore-file` in the first lines of a file to skip it. `aimarkers.py` itself uses it, because it contains every pattern it looks for.
@@ -339,7 +362,8 @@ aimarkers is designed to analyse untrusted content. It runs `git` with a hardene
 
 - It does not check whether code calls invented APIs: that requires running it or checking it against the documentation.
 - Without metadata, it can only give weak or medium signs about an image, and it misses most generated images (see [pixel reading](#pixel-reading)). It does not read invisible watermarks such as SynthID.
-- It does not read Office documents or PDF files yet.
+- Pasted areas in screenshots are only found when they went through JPEG and are large (about 1 in 3 pastes of 600×400 px; small ones almost never). Text edited in place, with the browser inspector or a paint tool, leaves no trace it can see.
+- In PDFs with embedded fonts, the text can only be read with pypdf installed; without it, only metadata and images are analysed.
 - The absence of markers does not prove human authorship: trailers and footers can be removed, text can be rewritten and metadata can be stripped.
 - The security analysis is automated and non-intrusive: it does not replace an audit or a penetration test, and its CVSS scores start from typical vectors that you should review.
 - URLs that need JavaScript to render content are analysed only by their initial HTML. In that case, save the page from the browser and analyse the file.

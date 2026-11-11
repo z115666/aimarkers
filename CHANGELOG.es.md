@@ -4,6 +4,12 @@
 
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [1.7.0] - 2026-11-11
+
+### Añadido
+- Documentos de Office y PDF: se analizan ficheros de Word, PowerPoint, Excel, LibreOffice y PDF. aimarkers lee sus metadatos (herramientas de IA y librerías con las que los asistentes crean ficheros, como python-docx, python-pptx, openpyxl, PptxGenJS y ReportLab), su texto (con las reglas habituales más el Markdown literal pegado desde un chat) y las imágenes que llevan dentro. Solo biblioteca estándar, con límites frente a bombas zip y PDF; pypdf es opcional para los PDF con fuentes incrustadas.
+- Capturas de pantalla: origen según metadatos o nombre de fichero, tamaño de pantalla real, un marcador medio para capturas con tamaño de salida de generador (como el 1024×1536 de ChatGPT) y sin programa de captura, y detección de zonas que pasaron por JPEG dentro de una captura sin pérdida (recortes pegados). Nueva columna «Captura y edición» en la lectura de píxeles.
+
 ## [1.6.0] - 2026-11-11
 
 ### Añadido
