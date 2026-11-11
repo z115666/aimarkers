@@ -38,6 +38,12 @@ aimarkers is meant to analyse **untrusted** content: third-party repositories, w
 | Report injection | The HTML report escapes all analysed content and contains no scripts; Markdown escapes HTML and pipes |
 | Supply chain | No runtime dependencies (standard library only). GitHub Actions pinned by commit hash and development tools installed with `--require-hashes`. The Homebrew formula points to a specific commit with its SHA-256 |
 
+## Accepted risks
+
+| Alert | Where | Why it is accepted | Mitigations | Review |
+| --- | --- | --- | --- | --- |
+| CodeQL `py/path-injection` (CWE-22/23/36/73/99): «Uncontrolled data used in path expression» | `aimarkers.py` (`analizar_objetivo`) and the paths it reaches | Analysing the file, folder or URL the user chooses is the tool's purpose. In the CLI the path is the operator's own argument, so it crosses no trust boundary. In the interface it arrives over HTTP, but only from the page that holds the session token. | The server listens on 127.0.0.1 only; a random 256-bit token is required on every request; `Host` and `Origin` are checked; files are read-only and size-limited; symbolic links are not followed; nothing is written outside a temporary folder. An attacker would already need to run code as the user. | On every change to `aimarkers_gui.py` or to how targets are received |
+
 ## Development lifecycle controls
 
 - **CI** on every push and pull request: ruff (including the `S` security rules), bandit and unit tests on Linux, macOS and Windows with Python 3.9 and the latest stable release.

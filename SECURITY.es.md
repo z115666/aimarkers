@@ -38,6 +38,12 @@ aimarkers está pensado para analizar contenido **no confiable**: repositorios, 
 | Inyección en los informes | El informe HTML escapa todo el contenido analizado y no contiene scripts; el Markdown escapa HTML y barras verticales |
 | Cadena de suministro | Sin dependencias en tiempo de ejecución (solo biblioteca estándar). Acciones de GitHub fijadas por hash de commit y herramientas de desarrollo instaladas con `--require-hashes`. La fórmula de Homebrew apunta a un commit concreto con su SHA-256 |
 
+## Riesgos aceptados
+
+| Alerta | Dónde | Por qué se acepta | Medidas | Revisión |
+| --- | --- | --- | --- | --- |
+| CodeQL `py/path-injection` (CWE-22/23/36/73/99): «Uncontrolled data used in path expression» | `aimarkers.py` (`analizar_objetivo`) y las rutas que alcanza | Analizar el fichero, la carpeta o la URL que elige el usuario es el propósito de la herramienta. En el CLI la ruta es el argumento del propio operador y no cruza ninguna frontera de confianza. En la interfaz llega por HTTP, pero solo desde la página que tiene el token de sesión. | El servidor solo escucha en 127.0.0.1; cada petición exige un token aleatorio de 256 bits; se comprueban `Host` y `Origin`; los ficheros solo se leen y con límite de tamaño; no se siguen enlaces simbólicos; nada se escribe fuera de una carpeta temporal. Un atacante ya tendría que ejecutar código como el usuario. | En cada cambio de `aimarkers_gui.py` o de la forma de recibir los objetivos |
+
 ## Controles en el ciclo de desarrollo
 
 - **CI** en cada *push* y *pull request*: ruff (incluye reglas de seguridad `S`), bandit y pruebas unitarias en Linux, macOS y Windows con Python 3.9 y la última estable.
