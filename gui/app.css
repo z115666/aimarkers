@@ -130,7 +130,8 @@ button, input { font: inherit; color: inherit; }
   -webkit-backdrop-filter: var(--desenfoque); backdrop-filter: var(--desenfoque);
   border-bottom: 1px solid var(--linea);
 }
-.marca { display: flex; align-items: center; gap: 10px; }
+.marca { display: flex; align-items: center; gap: 10px; border: 0; padding: 4px 6px; margin: -4px -6px; background: none; border-radius: 10px; cursor: pointer; justify-self: start; }
+.marca:hover { background: var(--uv-suave); }
 .marca-icono { width: 26px; height: 26px; color: var(--tinta); }
 .marca-nombre { font: 700 21px/1 var(--fuente-display); letter-spacing: -0.01em; }
 
@@ -447,4 +448,73 @@ button, input { font: inherit; color: inherit; }
 @media (max-width: 560px) {
   .seg-resumen { grid-template-columns: 1fr; gap: 28px; }
   .opciones-panel { position: fixed; left: 16px; right: 16px; top: auto; width: auto; max-height: 70vh; overflow: auto; }
+}
+
+/* ---------- Ilustración: la lupa ultravioleta ---------- */
+.inicio { max-width: 1120px; }
+.inicio .zona { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(300px, .95fr); column-gap: 48px; align-items: center; }
+.inicio .entradilla { margin-bottom: 0; }
+.inicio .ilustracion { grid-column: 2; grid-row: 1; }
+.inicio .capacidades { grid-column: 1 / -1; margin-top: 40px; }
+.ilustracion svg { display: block; width: 100%; height: auto; max-width: 540px; margin-inline: auto; touch-action: pan-y; }
+.ilu-stop { stop-color: var(--uv); }
+.ilu-hoja { fill: var(--panel-solido); stroke: var(--linea-fuerte); stroke-width: 1.2; }
+.ilu-trazo { fill: var(--linea-fuerte); }
+.ilu-tenue { fill: var(--linea); }
+.ilu-linea { fill: var(--linea-fuerte); }
+.ilu-marca { font: 12px var(--fuente-codigo); }
+.ilu-luz { pointer-events: none; }
+.ilu-marca.explicito { fill: var(--explicito); } .ilu-marca.fuerte { fill: var(--fuerte); }
+.ilu-marca.medio { fill: var(--medio); } .ilu-marca.debil { fill: var(--debil); }
+.ilu-subrayado { opacity: .9; }
+.ilu-subrayado.explicito { fill: var(--explicito); } .ilu-subrayado.fuerte { fill: var(--fuerte); }
+.ilu-subrayado.medio { fill: var(--medio); } .ilu-subrayado.debil { fill: var(--debil); }
+.ilu-tapa { fill: var(--panel-solido); }
+.ilu-anillo { fill: none; stroke: var(--uv); stroke-width: 3; }
+.ilu-mango { stroke: var(--tinta-2); stroke-width: 12; stroke-linecap: round; }
+.ilu-insignia rect { fill: var(--explicito); } .ilu-insignia text { fill: #fff; font: 700 11px var(--fuente-ui); letter-spacing: .02em; }
+.analizando-ilu { max-width: 420px; margin-top: 36px; opacity: .95; }
+.analizando-ilu:empty { display: none; }
+
+/* Iconos de capacidades y botones */
+.capacidades { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.cap-icono { width: 22px; height: 22px; color: var(--uv); margin-bottom: 2px; }
+.boton.con-icono { display: inline-flex; align-items: center; gap: 7px; }
+.boton.con-icono svg { width: 18px; height: 18px; flex: none; }
+.boton .corto { display: none; }
+
+@media (max-width: 1280px) and (min-width: 981px) {
+  /* Solo iconos: deja sitio al campo de ruta */
+  .boton.con-icono { padding: 0 10px; }
+  .boton.con-icono > span[data-i18n]:not(.corto) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}
+@media (max-width: 1100px) {
+  .inicio .zona { grid-template-columns: 1fr; }
+  .inicio .ilustracion { grid-column: 1; grid-row: auto; max-width: 460px; margin-top: 28px; }
+  .capacidades { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 980px) {
+  /* Ruta y «Analizar» en la misma fila; acciones secundarias debajo */
+  .buscador { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 8px; flex-wrap: initial; }
+  .buscador input[type="text"] { grid-column: 1 / 4; grid-row: 1; flex-basis: auto; }
+  .buscador #analizar { grid-column: 4; grid-row: 1; }
+  .buscador #elegir-fichero { grid-column: 1; grid-row: 2; }
+  .buscador #elegir-carpeta { grid-column: 2; grid-row: 2; }
+  .buscador .opciones { grid-column: 3; grid-row: 2; }
+  .buscador .boton, .opciones > summary { width: 100%; justify-content: center; }
+  .app { min-height: 0; }
+  .banco { min-height: 60vh; }
+}
+@media (max-width: 560px) {
+  .buscador .boton.con-icono { padding: 0 6px; gap: 6px; font-size: 14px; min-width: 0; }
+  .boton .largo { display: none; }
+  .boton .corto { display: inline; }
+  /* Sin desenfoque en la barra: si no, el panel fijo de opciones quedaría atrapado dentro de ella */
+  .barra { -webkit-backdrop-filter: none; backdrop-filter: none; background: var(--panel-solido); }
+  .capacidades { grid-template-columns: 1fr; }
+  .titular { font-size: clamp(34px, 10vw, 44px); }
+  .opciones-panel { position: fixed; left: 0; right: 0; bottom: 0; top: auto; width: auto; max-height: 82vh; overflow: auto;
+    border-radius: 18px 18px 0 0; padding-bottom: calc(16px + env(safe-area-inset-bottom)); box-shadow: 0 -12px 40px rgba(0,0,0,.35); }
+  .opciones[open]::before { content: ""; position: fixed; inset: 0; background: rgba(10, 8, 18, .45); z-index: 29; }
+  .seg-cvss-cifra, .espectro-cifra { font-size: 56px; }
 }

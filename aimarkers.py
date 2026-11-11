@@ -46,7 +46,7 @@ from datetime import datetime, timezone
 from html.parser import HTMLParser
 from pathlib import Path
 
-VERSION = "1.3.0"
+VERSION = "1.3.1"
 
 # ---------------------------------------------------------------------------
 # Idioma / Language
@@ -168,6 +168,8 @@ TEXTOS: dict[str, tuple[str, str]] = {
                             "Crawl stopped at {n} pages (use --max-pages to change the limit; -1 for no limit)."),
     "nota.paginas_rastreadas": ("{n} páginas descargadas del sitio (borradas al terminar).",
                                 "{n} pages downloaded from the site (deleted afterwards)."),
+    "nota.estado_http": ("La web respondió con el estado HTTP {n}: el análisis corresponde a esa página de error.",
+                         "The website answered with HTTP status {n}: the analysis covers that error page."),
     "nota.robots": ("Se ha respetado robots.txt.", "robots.txt was respected."),
     "prog.paginas": ("Rastreando: {n} páginas", "Crawling: {n} pages"),
     "prog.scripts": ("Descargando JavaScript del sitio: {n}", "Downloading site JavaScript: {n}"),
@@ -1712,6 +1714,8 @@ def analizar_web_objetivo(objetivo: str, opciones) -> Resultado:
             res.notas.append(t("nota.no_descarga", e=rastreo.error))
             return res
         res.notas.extend(rastreo.notas)
+        if rastreo.paginas[0].estado >= 400:
+            res.notas.insert(0, t("nota.estado_http", n=rastreo.paginas[0].estado))
         if opciones.rastrear:
             res.notas.append(t("nota.paginas_rastreadas", n=len(rastreo.paginas)))
             if not opciones.ignorar_robots:

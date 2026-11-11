@@ -4,6 +4,15 @@
 
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [1.3.1] - 2026-11-11
+
+### Añadido
+- Interfaz: ilustración animada de una lupa ultravioleta que revela marcadores ocultos (sigue al ratón; queda quieta si el sistema pide reducir el movimiento), también mientras se analiza; iconos en las capacidades y los botones; una cuarta tarjeta de capacidad para la seguridad; el logotipo vuelve a la pantalla de inicio.
+- Nota cuando una web responde con un estado HTTP de error.
+
+### Cambiado
+- Diseño adaptable: botones solo con icono en anchos medios, campo de ruta y «Analizar» en la misma fila en tablet y móvil, etiquetas cortas y panel de opciones como hoja inferior en el móvil, sin hueco vacío antes de la lista de casos en pantallas estrechas.
+
 ## [1.3.0] - 2026-11-11
 
 ### Añadido

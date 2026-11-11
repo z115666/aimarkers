@@ -4,6 +4,15 @@
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [semantic versioning](https://semver.org/).
 
+## [1.3.1] - 2026-11-11
+
+### Added
+- Interface: animated illustration of an ultraviolet magnifier that reveals hidden markers (follows the mouse; still when the system asks for reduced motion), also shown while analysing; icons for the capabilities and buttons; a fourth capability card for security; the logo returns to the start screen.
+- Note when a website answers with an HTTP error status.
+
+### Changed
+- Responsive layout: icon-only buttons at medium widths, path field and «Analyse» on the same row on tablets and phones, short button labels and an options bottom sheet on phones, no empty gap above the session list on narrow screens.
+
 ## [1.3.0] - 2026-11-11
 
 ### Added

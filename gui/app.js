@@ -24,6 +24,10 @@ const TEXTOS = {
     "cap-imagen": "Credenciales C2PA, origen IPTC, EXIF y parámetros de Stable Diffusion o ComfyUI.",
     "cap-repo-t": "Repositorios y webs",
     "cap-repo": "Coautorías en commits, ramas de agentes, constructores web y cargas masivas de datos.",
+    "volver-inicio": "Volver al inicio",
+    "corto-fichero": "Archivo", "corto-carpeta": "Carpeta",
+    "cap-seg-t": "Seguridad",
+    "cap-seg": "OWASP Top 10, técnicas de MITRE ATT&CK, CVSS v4.0 y matriz de riesgos sobre la triada CID.",
     "analizando": "Analizando",
     "subiendo": "Preparando {a} de {b} ficheros",
     "explicita": "El propio contenido declara una herramienta de IA.",
@@ -105,6 +109,10 @@ const TEXTOS = {
     "cap-imagen": "C2PA Content Credentials, IPTC source, EXIF and Stable Diffusion or ComfyUI parameters.",
     "cap-repo-t": "Repositories and websites",
     "cap-repo": "Commit co-authors, agent branches, website builders and bulk data loads.",
+    "volver-inicio": "Back to start",
+    "corto-fichero": "File", "corto-carpeta": "Folder",
+    "cap-seg-t": "Security",
+    "cap-seg": "OWASP Top 10, MITRE ATT&CK techniques, CVSS v4.0 and a risk matrix over the CIA triad.",
     "analizando": "Analysing",
     "subiendo": "Preparing {a} of {b} files",
     "explicita": "The content itself declares an AI tool.",
@@ -275,9 +283,101 @@ function pintarEstadoC2pa() {
   textoConNegrita($("estado-c2pa"), t(estado.config.c2patool ? "c2pa-si" : "c2pa-no"));
 }
 
+
+// ---------- Ilustración: una hoja con marcas ocultas que la lupa UV hace visibles ----------
+const SVGNS = "http://www.w3.org/2000/svg";
+const LINEAS = [220, 180, 250, 140, 230, 200, 120, 240, 170, 210, 150];
+const MARCAS = { 1: ["explicito", "Co-Authored-By: Claude"], 4: ["fuerte", "utm_source=chatgpt"],
+  7: ["medio", "c2pa: trainedAlgorithmic"], 9: ["debil", "CVSS:4.0/AV:N/AC:L"] };
+const ilu = { x: 200, y: 170, objetivo: null, modo: "deriva", activo: false, t: 0, ultimo: 0 };
+
+function svg(etiqueta, atributos, padre) {
+  const nodo = document.createElementNS(SVGNS, etiqueta);
+  for (const [k, v] of Object.entries(atributos)) nodo.setAttribute(k, v);
+  if (padre) padre.append(nodo);
+  return nodo;
+}
+
+function construirIlustracion() {
+  const lineas = $("ilu-lineas");
+  const revelado = $("ilu-revelado");
+  if (!lineas || lineas.childElementCount) return;
+  LINEAS.forEach((ancho, i) => {
+    const y = 124 + i * 24;
+    const x = 64 + (i % 4 === 2 ? 24 : 0);
+    svg("rect", { x, y, width: ancho, height: 8, rx: 4, class: "ilu-linea" }, lineas);
+    const marca = MARCAS[i];
+    if (!marca) return;
+    // Bajo la luz, la línea normal se tapa y aparece la marca fluorescente
+    svg("rect", { x: x - 4, y: y - 6, width: ancho + 8, height: 20, class: "ilu-tapa" }, revelado);
+    const texto = svg("text", { x, y: y + 8, class: "ilu-marca " + marca[0] }, revelado);
+    texto.textContent = marca[1];
+    svg("rect", { x, y: y + 12, width: Math.min(ancho, marca[1].length * 7.4), height: 2, rx: 1,
+      class: "ilu-subrayado " + marca[0], filter: "url(#ilu-brillo)" }, revelado);
+  });
+  // Credencial C2PA en la imagen del fondo
+  const insignia = svg("g", { class: "ilu-insignia", transform: "rotate(-7 410 115)" }, revelado);
+  svg("rect", { x: 318, y: 54, width: 46, height: 20, rx: 6, filter: "url(#ilu-brillo)" }, insignia);
+  svg("text", { x: 327, y: 68 }, insignia).textContent = "C2PA";
+
+  const lienzo = $("ilustracion");
+  const punto = (ev) => {
+    const ctm = lienzo.getScreenCTM();
+    if (!ctm) return null;
+    const p = new DOMPoint(ev.clientX, ev.clientY).matrixTransform(ctm.inverse());
+    return { x: Math.max(60, Math.min(500, p.x)), y: Math.max(80, Math.min(390, p.y)) };
+  };
+  lienzo.addEventListener("pointermove", (ev) => { if (ev.pointerType === "mouse") ilu.objetivo = punto(ev); });
+  lienzo.addEventListener("pointerleave", () => { ilu.objetivo = null; });
+  colocarLupa(200, 150);
+}
+
+function colocarLupa(x, y) {
+  ilu.x = x; ilu.y = y;
+  $("ilu-circulo").setAttribute("cx", x.toFixed(1));
+  $("ilu-circulo").setAttribute("cy", y.toFixed(1));
+  $("ilu-luz-circulo").setAttribute("cx", x.toFixed(1));
+  $("ilu-luz-circulo").setAttribute("cy", y.toFixed(1));
+  $("ilu-lupa").setAttribute("transform", `translate(${x.toFixed(1)} ${y.toFixed(1)})`);
+}
+
+function pasoIlustracion(ahora) {
+  if (!ilu.activo) return;
+  const lienzo = $("ilustracion");
+  if (!lienzo || !lienzo.isConnected || lienzo.getBoundingClientRect().width === 0 || document.hidden) {
+    ilu.activo = false;
+    return;
+  }
+  const dt = Math.min(64, ahora - (ilu.ultimo || ahora)) / 1000;
+  ilu.ultimo = ahora;
+  ilu.t += dt * (ilu.modo === "escaneo" ? 2.6 : 1);
+  let destino;
+  if (ilu.objetivo) destino = ilu.objetivo;
+  else if (ilu.modo === "escaneo") destino = { x: 205 + 115 * Math.sin(ilu.t * 1.3), y: 140 + ((ilu.t * 38) % 250) };
+  else destino = { x: 210 + 120 * Math.sin(ilu.t * 0.33), y: 230 + 105 * Math.sin(ilu.t * 0.47 + 1) };
+  const suavizado = ilu.objetivo ? 0.18 : 0.06;
+  colocarLupa(ilu.x + (destino.x - ilu.x) * suavizado, ilu.y + (destino.y - ilu.y) * suavizado);
+  requestAnimationFrame(pasoIlustracion);
+}
+
+function animarIlustracion(modo) {
+  ilu.modo = modo;
+  if (reducirMovimiento.matches) { colocarLupa(150, 150); return; }
+  if (!ilu.activo) { ilu.activo = true; ilu.ultimo = 0; requestAnimationFrame(pasoIlustracion); }
+}
+
+function moverIlustracion(destino, modo) {
+  const lienzo = $("ilustracion");
+  if (!lienzo) return;
+  $(destino).append(lienzo);
+  animarIlustracion(modo);
+}
+
 // ---------- Vistas ----------
 function mostrar(vista) {
   for (const nombre of ["inicio", "analizando", "resultado"]) $("vista-" + nombre).hidden = nombre !== vista;
+  if (vista === "analizando") moverIlustracion("destino-analizando", "escaneo");
+  else moverIlustracion("destino-inicio", "deriva");
 }
 
 const reducirMovimiento = matchMedia("(prefers-reduced-motion: reduce)");
@@ -742,6 +842,14 @@ function conectar() {
     if (ev.key === "Escape" && $("opciones").open) { $("opciones").open = false; $("opciones").querySelector("summary").focus(); }
   });
 
+  $("inicio").addEventListener("click", () => {
+    if (estado.ocupado) return;
+    estado.actual = null;
+    mostrar("inicio");
+    pintarCasos();
+    revelar($("titular-inicio"));
+  });
+
   $("tema").addEventListener("click", () => {
     estado.tema = { auto: "dark", dark: "light", light: "auto" }[estado.tema];
     guardar("tema", estado.tema);
@@ -785,6 +893,9 @@ async function iniciar() {
   estado.idioma = ["es", "en"].includes(idiomaGuardado) ? idiomaGuardado
     : ((navigator.language || "").toLowerCase().startsWith("es") ? "es" : "en");
   conectar();
+  construirIlustracion();
+  animarIlustracion("deriva");
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) animarIlustracion(ilu.modo); });
   cargarOpciones();
   aplicarIdioma();
   revelar($("titular-inicio"));

@@ -16,6 +16,13 @@
     <symbol id="luna" viewBox="0 0 24 24">
       <path d="M19.5 14.6A8 8 0 0 1 9.4 4.5a8 8 0 1 0 10.1 10.1z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
     </symbol>
+    <symbol id="i-codigo" viewBox="0 0 24 24"><path d="M8.5 7 3.5 12l5 5M15.5 7l5 5-5 5M13.5 4.5l-3 15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-imagen" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="15.5" cy="9.5" r="1.8" fill="currentColor"/><path d="m4 17 5-5.5 4 4 2.5-2.5 4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+    <symbol id="i-repo" viewBox="0 0 24 24"><circle cx="6.5" cy="5.5" r="2.2" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="6.5" cy="18.5" r="2.2" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="17.5" cy="8.5" r="2.2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M6.5 7.7v8.6M17.5 10.7c0 4-11 2.5-11 5.6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+    <symbol id="i-escudo" viewBox="0 0 24 24"><path d="M12 3.2 5 6v5.6c0 4.4 2.9 7.8 7 9.2 4.1-1.4 7-4.8 7-9.2V6z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="m9 12 2.2 2.2L15.5 10" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-archivo" viewBox="0 0 24 24"><path d="M6.5 3.5h7l4.5 4.5v12.5h-11.5z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M13.5 3.5V8h4.5M9 13h6M9 16.5h4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-carpeta" viewBox="0 0 24 24"><path d="M3.5 6.5a1.5 1.5 0 0 1 1.5-1.5h4.3l2 2.2H19a1.5 1.5 0 0 1 1.5 1.5v9.3a1.5 1.5 0 0 1-1.5 1.5H5a1.5 1.5 0 0 1-1.5-1.5z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+    <symbol id="i-ajustes" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="15" cy="7" r="2.2" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="9" cy="17" r="2.2" fill="none" stroke="currentColor" stroke-width="1.7"/></symbol>
   </defs>
   <rect width="32" height="32" rx="8" fill="#1d1830"/>
   <use href="#lupa" x="2" y="2" width="28" height="28" color="#efeaff"/>

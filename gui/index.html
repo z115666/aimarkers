@@ -16,18 +16,18 @@
 <a class="saltar" href="#banco" data-i18n="saltar">Ir al contenido</a>
 
 <header class="barra">
-  <div class="marca">
+  <button type="button" class="marca" id="inicio" data-i18n-aria="volver-inicio">
     <svg class="marca-icono" viewBox="0 0 32 32" aria-hidden="true"><use href="/icon.svg#lupa"></use></svg>
     <span class="marca-nombre">aimarkers</span>
-  </div>
+  </button>
 
   <form id="formulario" class="buscador" autocomplete="off">
     <label class="visualmente-oculto" for="objetivo" data-i18n="etiqueta-objetivo">Ruta o URL que quieres analizar</label>
     <input id="objetivo" name="objetivo" type="text" spellcheck="false" data-i18n-placeholder="placeholder">
-    <button type="button" class="boton secundario" id="elegir-fichero" data-i18n="elegir-fichero">Elegir archivo</button>
-    <button type="button" class="boton secundario" id="elegir-carpeta" data-i18n="elegir-carpeta">Elegir carpeta</button>
+    <button type="button" class="boton secundario con-icono" id="elegir-fichero"><svg aria-hidden="true"><use href="/icon.svg#i-archivo"></use></svg><span class="largo" data-i18n="elegir-fichero">Elegir archivo</span><span class="corto" data-i18n="corto-fichero">Archivo</span></button>
+    <button type="button" class="boton secundario con-icono" id="elegir-carpeta"><svg aria-hidden="true"><use href="/icon.svg#i-carpeta"></use></svg><span class="largo" data-i18n="elegir-carpeta">Elegir carpeta</span><span class="corto" data-i18n="corto-carpeta">Carpeta</span></button>
     <details class="opciones" id="opciones">
-      <summary class="boton secundario"><span data-i18n="opciones">Opciones</span><span class="opciones-cuenta" id="opciones-cuenta"></span></summary>
+      <summary class="boton secundario con-icono"><svg aria-hidden="true"><use href="/icon.svg#i-ajustes"></use></svg><span data-i18n="opciones">Opciones</span><span class="opciones-cuenta" id="opciones-cuenta"></span></summary>
       <div class="opciones-panel" role="group" data-i18n-aria="opciones">
         <fieldset>
           <legend data-i18n="op-que">Qué analizar</legend>
@@ -77,12 +77,43 @@
   <main id="banco" class="banco" tabindex="-1">
     <section id="vista-inicio" class="vista inicio">
       <div class="zona" id="zona">
-        <h1 class="titular revelable" id="titular-inicio" data-i18n="titular">Saca a la luz lo que no se ve</h1>
-        <p class="entradilla" data-i18n="entradilla">Arrastra aquí ficheros, carpetas o imágenes, o escribe arriba una ruta o una URL. Todo se analiza en este equipo.</p>
+        <div class="inicio-texto">
+          <h1 class="titular revelable" id="titular-inicio" data-i18n="titular">Saca a la luz lo que no se ve</h1>
+          <p class="entradilla" data-i18n="entradilla">Arrastra aquí ficheros, carpetas o imágenes, o escribe arriba una ruta o una URL. Todo se analiza en este equipo.</p>
+        </div>
+        <div class="ilustracion" id="destino-inicio">
+          <svg id="ilustracion" viewBox="0 0 560 440" aria-hidden="true" focusable="false">
+            <defs>
+              <radialGradient id="ilu-luz" cx="50%" cy="50%" r="50%">
+                <stop offset="0" class="ilu-stop" stop-opacity=".30"/><stop offset=".75" class="ilu-stop" stop-opacity=".12"/><stop offset="1" class="ilu-stop" stop-opacity=".03"/>
+              </radialGradient>
+              <filter id="ilu-brillo" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+              <clipPath id="ilu-recorte"><circle id="ilu-circulo" cx="200" cy="170" r="88"/></clipPath>
+            </defs>
+            <g class="ilu-papel">
+              <g transform="rotate(-7 410 115)">
+                <rect x="300" y="40" width="220" height="150" rx="12" class="ilu-hoja"/>
+                <circle cx="470" cy="82" r="13" class="ilu-trazo"/>
+                <path d="M316 176 370 118l35 32 35-40 66 66z" class="ilu-tenue"/>
+              </g>
+              <rect x="40" y="70" width="330" height="330" rx="16" class="ilu-hoja"/>
+              <circle cx="62" cy="92" r="4" class="ilu-trazo"/><circle cx="76" cy="92" r="4" class="ilu-trazo"/><circle cx="90" cy="92" r="4" class="ilu-trazo"/>
+              <g class="ilu-lineas" id="ilu-lineas"></g>
+            </g>
+            <g clip-path="url(#ilu-recorte)" class="ilu-revelado" id="ilu-revelado">
+            </g>
+            <circle id="ilu-luz-circulo" cx="200" cy="170" r="88" fill="url(#ilu-luz)" class="ilu-luz"/>
+            <g id="ilu-lupa" class="ilu-lupa" transform="translate(200 170)">
+              <circle r="90" class="ilu-anillo" filter="url(#ilu-brillo)"/>
+              <path d="M65 65 112 112" class="ilu-mango"/>
+            </g>
+          </svg>
+        </div>
         <ul class="capacidades">
-          <li><strong data-i18n="cap-codigo-t">Código y textos</strong><span data-i18n="cap-codigo">Firmas de asistentes, restos de chat, muletillas y plantillas sin rellenar.</span></li>
-          <li><strong data-i18n="cap-imagen-t">Imágenes</strong><span data-i18n="cap-imagen">Credenciales C2PA, origen IPTC, EXIF y parámetros de Stable Diffusion o ComfyUI.</span></li>
-          <li><strong data-i18n="cap-repo-t">Repositorios y webs</strong><span data-i18n="cap-repo">Coautorías en commits, ramas de agentes, constructores web y cargas masivas de datos.</span></li>
+          <li><svg class="cap-icono" aria-hidden="true"><use href="/icon.svg#i-codigo"></use></svg><strong data-i18n="cap-codigo-t">Código y textos</strong><span data-i18n="cap-codigo">Firmas de asistentes, restos de chat, muletillas y plantillas sin rellenar.</span></li>
+          <li><svg class="cap-icono" aria-hidden="true"><use href="/icon.svg#i-imagen"></use></svg><strong data-i18n="cap-imagen-t">Imágenes</strong><span data-i18n="cap-imagen">Credenciales C2PA, origen IPTC, EXIF y parámetros de Stable Diffusion o ComfyUI.</span></li>
+          <li><svg class="cap-icono" aria-hidden="true"><use href="/icon.svg#i-repo"></use></svg><strong data-i18n="cap-repo-t">Repositorios y webs</strong><span data-i18n="cap-repo">Coautorías en commits, ramas de agentes, constructores web y cargas masivas de datos.</span></li>
+          <li><svg class="cap-icono" aria-hidden="true"><use href="/icon.svg#i-escudo"></use></svg><strong data-i18n="cap-seg-t">Seguridad</strong><span data-i18n="cap-seg">OWASP Top 10, técnicas de MITRE ATT&amp;CK, CVSS v4.0 y matriz de riesgos sobre la triada CID.</span></li>
         </ul>
       </div>
     </section>
@@ -91,6 +122,7 @@
       <p class="titular revelando" id="texto-analizando" data-i18n="analizando">Analizando</p>
       <p class="progreso" id="progreso"></p>
       <div class="haz" aria-hidden="true"></div>
+      <div class="ilustracion analizando-ilu" id="destino-analizando"></div>
     </section>
 
     <section id="vista-resultado" class="vista resultado" hidden>
