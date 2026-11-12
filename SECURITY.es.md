@@ -6,6 +6,7 @@
 
 | Versión | Soporte |
 | --- | --- |
+| 1.8.x | Sí |
 | 1.7.x | Sí |
 | 1.6.x | Sí |
 | 1.5.x | Sí |
@@ -41,6 +42,7 @@ aimarkers está pensado para analizar contenido **no confiable**: repositorios, 
 | Filtrado de secretos encontrados durante el análisis | Las claves y tokens se muestran recortados en los informes; las contraseñas de las URL de bases de datos se sustituyen por `•••` |
 | Decodificación de imágenes para la lectura de píxeles | Opcional y solo si están instalados Pillow y NumPy. El límite de Pillow se fija en 50 megapíxeles (se rechazan las bombas de descompresión), solo se convierte a números un recorte de 1024×1024 y cualquier error de decodificación solo omite la lectura. Mantén Pillow actualizado: es la parte que interpreta los datos de imagen no confiables |
 | Lectura de documentos de Office y PDF | Contenedores ZIP: como máximo 5.000 entradas, 120 MB descomprimidos en total, 30 MB por parte y una relación de compresión de 200:1 por entrada (las bombas zip se omiten); las entradas cifradas se ignoran. El XML se lee con expresiones regulares, nunca con un analizador que expanda entidades. PDF: como máximo 400 flujos, 60 MB por fichero y los mismos límites de descompresión. pypdf es opcional; si está instalado, solo se usa para extraer el texto y cualquier error se ignora |
+| Webs internas con certificado no reconocido | Los certificados se verifican siempre por defecto. `--ca` añade una CA o un certificado de servidor y mantiene la verificación (recomendado). `--confiar-certificado` (o la opción de la interfaz, que no se recuerda entre sesiones) desactiva la verificación solo para el host analizado: nunca para terceros, OSV.dev ni DNS, y se restablece tras cada análisis. La comprobación TLS sigue verificando y registra el certificado como hallazgo, y el informe avisa de que el contenido podría haberse alterado por el camino |
 | Consultas a OSV.dev | Dirección fija en HTTPS (`api.osv.dev`), tiempo máximo de 20 s, respuestas limitadas a 8 MB y validadas como JSON; los identificadores de aviso se comprueban con un patrón estricto antes de usarlos en una URL; como máximo 3.000 paquetes y 200 avisos por análisis; un fallo solo añade una nota |
 | Inyección en los informes | El informe HTML escapa todo el contenido analizado y no contiene scripts; el Markdown escapa HTML y barras verticales |
 | Cadena de suministro | Sin dependencias obligatorias en tiempo de ejecución (solo biblioteca estándar; Pillow y NumPy son opcionales). Acciones de GitHub fijadas por hash de commit y herramientas de desarrollo instaladas con `--require-hashes`. La fórmula de Homebrew apunta a un commit concreto con su SHA-256 |

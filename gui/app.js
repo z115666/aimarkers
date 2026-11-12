@@ -82,6 +82,8 @@ const TEXTOS = {
     "op-ia": "Marcadores de IA",
     "op-seguridad": "Seguridad (OWASP, MITRE, CVSS)",
     "op-consultas": "Consultar bases públicas (DNS y OSV.dev)",
+    "op-confiar": "Confiar en el certificado de esta web",
+    "op-confiar-ayuda": "Para webs internas con certificado propio. Solo afecta a la web analizada y queda registrado como hallazgo.",
     "op-consultas-ayuda": "Solo se envían el dominio y el nombre y la versión de cada dependencia, nunca tu código.",
     "imagenes-web": "Imágenes de las webs",
     "op-webs": "Webs",
@@ -194,6 +196,8 @@ const TEXTOS = {
     "op-ia": "AI markers",
     "op-seguridad": "Security (OWASP, MITRE, CVSS)",
     "op-consultas": "Query public databases (DNS and OSV.dev)",
+    "op-confiar": "Trust this website's certificate",
+    "op-confiar-ayuda": "For internal sites with their own certificate. It only affects the analysed site and is recorded as a finding.",
     "op-consultas-ayuda": "Only the domain and each dependency's name and version are sent, never your code.",
     "imagenes-web": "Website images",
     "op-webs": "Websites",
@@ -1069,6 +1073,7 @@ function opcionesActuales() {
     seguridad, solo_seguridad: seguridad && !ia,
     activo: $("op-activo").checked, autorizado: $("op-activo").checked && $("op-autorizado").checked,
     consultas: $("op-consultas").checked,
+    confiar_certificado: $("op-confiar").checked,
   };
 }
 
@@ -1094,7 +1099,7 @@ function actualizarOpciones() {
   $("op-autorizado-fila").hidden = !$("op-activo").checked;
   if (!$("op-activo").checked) $("op-autorizado").checked = false;
   const activas = ["op-seguridad", "op-rastrear", "op-activo"].filter((id) => $(id).checked).length + ($("op-ia").checked ? 0 : 1)
-    + ($("op-consultas").checked ? 0 : 1);
+    + ($("op-consultas").checked ? 0 : 1) + ($("op-confiar").checked ? 1 : 0);
   $("opciones-cuenta").textContent = activas ? String(activas) : "";
 }
 

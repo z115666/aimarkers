@@ -1238,7 +1238,10 @@ def analizar_cookies(informe: InformeSeguridad, p: web.Pagina, ubic: str) -> Non
 
 
 def analizar_tls(informe: InformeSeguridad, host: str, puerto: int = 443) -> None:
-    contexto = ssl.create_default_context()
+    import aimarkers_web
+    contexto = ssl.create_default_context()  # siempre verifica: un certificado aceptado a mano sigue siendo un hallazgo
+    if aimarkers_web._TLS["ca"]:
+        contexto.load_verify_locations(cafile=aimarkers_web._TLS["ca"])
     try:
         with socket.create_connection((host, puerto), timeout=10) as s, contexto.wrap_socket(s, server_hostname=host) as t:
             cert = t.getpeercert() or {}

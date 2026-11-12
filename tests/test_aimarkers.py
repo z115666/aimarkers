@@ -639,6 +639,37 @@ class PruebasSeguridadYRastreo(unittest.TestCase):
         extra.setdefault("osv", False)  # sin red externa en las pruebas: OSV.dev se simula aparte
         return self.web.Opciones(retardo=0, imagenes=False, **extra)
 
+    @unittest.skipUnless(shutil.which("openssl"), "necesita openssl para crear un certificado de prueba")
+    def test_certificado_propio(self):
+        import ssl
+        import subprocess  # nosec B404
+        with tempfile.TemporaryDirectory() as tmp:
+            subprocess.run(["openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes", "-keyout", f"{tmp}/k.pem",  # nosec
+                            "-out", f"{tmp}/c.pem", "-days", "2", "-subj", "/CN=localhost",
+                            "-addext", "subjectAltName=DNS:localhost,IP:127.0.0.1"], check=True, capture_output=True)
+            servidor = http.server.ThreadingHTTPServer(("127.0.0.1", 0), SitioDePrueba)
+            contexto = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+            contexto.load_cert_chain(f"{tmp}/c.pem", f"{tmp}/k.pem")
+            servidor.socket = contexto.wrap_socket(servidor.socket, server_side=True)
+            threading.Thread(target=servidor.serve_forever, daemon=True).start()
+            url = f"https://localhost:{servidor.server_address[1]}/"
+            try:
+                rechazada = aimarkers.analizar_objetivo(url, opciones=self.opciones())
+                confiada = aimarkers.analizar_objetivo(url, opciones=self.opciones(confiar_certificado=True, seguridad=True,
+                                                                                  dns=False))
+                con_ca = aimarkers.analizar_objetivo(url, opciones=self.opciones(ca=f"{tmp}/c.pem"))
+                despues = aimarkers.analizar_objetivo(url, opciones=self.opciones())
+            finally:
+                servidor.shutdown()
+        self.assertEqual(rechazada.ficheros_analizados, 0)
+        self.assertTrue(any("--confiar-certificado" in n or "--trust-certificate" in n for n in rechazada.notas))
+        self.assertGreater(confiada.ficheros_analizados, 0)
+        self.assertIn("cert-invalido", {h["id"] for h in confiada.seguridad.a_dict()["hallazgos"]})  # sigue siendo un hallazgo
+        self.assertGreater(con_ca.ficheros_analizados, 0)
+        self.assertEqual(despues.ficheros_analizados, 0)  # la excepción no se queda puesta para el siguiente análisis
+        import aimarkers_web
+        self.assertTrue(aimarkers_web.contexto_tls("otra.example").verify_mode == ssl.CERT_REQUIRED)
+
     def test_osv_web_completa_librerias(self):
         import aimarkers_dependencias as dep
 

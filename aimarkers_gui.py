@@ -309,7 +309,8 @@ class Manejador(BaseHTTPRequestHandler):
             seguridad=bool(datos.get("seguridad")) or bool(datos.get("solo_seguridad")),
             solo_seguridad=bool(datos.get("solo_seguridad")), activo=bool(datos.get("activo")),
             autorizado=bool(datos.get("autorizado")), dns=bool(datos.get("consultas", True)),
-            osv=bool(datos.get("consultas", True)), progreso=_avance)
+            osv=bool(datos.get("consultas", True)), confiar_certificado=bool(datos.get("confiar_certificado")),
+            progreso=_avance)
         if opciones.activo and not opciones.autorizado:
             return self._error(HTTPStatus.BAD_REQUEST, "authorization")
         objetivos = []

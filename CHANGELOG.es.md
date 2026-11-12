@@ -4,6 +4,11 @@
 
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [1.8.0] - 2026-11-12
+
+### Añadido
+- Webs internas con certificado propio: `--ca fichero.pem` confía en una CA interna o en el certificado del servidor y mantiene la verificación; `--confiar-certificado` (y la opción **Confiar en el certificado de esta web** de la interfaz) acepta un certificado no válido solo para el host analizado. El certificado sigue apareciendo como hallazgo de seguridad y, cuando una web falla por su certificado, el informe explica cómo analizarla.
+
 ## [1.7.0] - 2026-11-11
 
 ### Añadido

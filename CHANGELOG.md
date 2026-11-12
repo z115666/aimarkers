@@ -4,6 +4,11 @@
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [semantic versioning](https://semver.org/).
 
+## [1.8.0] - 2026-11-12
+
+### Added
+- Internal websites with their own certificate: `--ca file.pem` trusts an internal CA or the server certificate and keeps verification on; `--trust-certificate` (and the **Trust this website's certificate** option in the interface) accepts an invalid certificate for the analysed host only. The certificate is still reported as a security finding, and when a site fails because of its certificate the report explains how to analyse it.
+
 ## [1.7.0] - 2026-11-11
 
 ### Added

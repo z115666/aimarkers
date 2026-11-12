@@ -30,6 +30,7 @@ import locale
 import os
 import re
 import shutil
+import ssl
 import statistics
 import struct
 import subprocess  # nosec B404
@@ -47,7 +48,7 @@ from datetime import datetime, timezone
 from html.parser import HTMLParser
 from pathlib import Path
 
-VERSION = "1.7.0"
+VERSION = "1.8.0"
 
 # ---------------------------------------------------------------------------
 # Idioma / Language
@@ -152,6 +153,17 @@ TEXTOS: dict[str, tuple[str, str]] = {
     "nota.git_mas": ("Git: {n} commits con marcador «{c}» (se muestran 5).", "Git: {n} commits with marker «{c}» (5 shown)."),
     "nota.generator": ("{u}: meta generator = «{g}»", "{u}: meta generator = «{g}»"),
     "nota.no_descarga": ("No se pudo descargar: {e}", "Could not download: {e}"),
+    "nota.tls_confiado": ("Verificación del certificado desactivada para {h}, como has pedido: el análisis no puede descartar "
+                          "que un intermediario haya cambiado el contenido. Úsalo solo en redes que controlas.",
+                          "Certificate verification turned off for {h}, as requested: the analysis cannot rule out that "
+                          "someone in the middle changed the content. Use it only on networks you control."),
+    "nota.tls_ca": ("Certificados verificados también con {c}.", "Certificates also verified against {c}."),
+    "nota.tls_ayuda": ("El certificado de la web no es de confianza. Si es una web interna con certificado propio, vuelve a "
+                       "analizarla con --ca ruta.pem (la CA interna o el certificado del servidor) o, si no lo tienes, con "
+                       "--confiar-certificado (en la interfaz: Opciones → Confiar en el certificado de esta web).",
+                       "The website's certificate is not trusted. If it is an internal site with its own certificate, analyse "
+                       "it again with --ca path.pem (the internal CA or the server certificate) or, if you do not have it, "
+                       "with --trust-certificate (in the interface: Options → Trust this website's certificate)."),
     "nota.no_reconocido": ("Tipo de fichero no reconocido o binario; no se ha analizado.",
                            "Unrecognised or binary file type; not analysed."),
     "nota.no_existe": ("No existe el fichero o directorio.", "File or directory not found."),
@@ -319,6 +331,12 @@ TEXTOS: dict[str, tuple[str, str]] = {
                       "Add the security analysis (OWASP Top 10, MITRE ATT&CK, CVSS v4.0, CIA risk matrix)"),
     "cli.detenido": ("Análisis detenido. No se ha generado ningún informe y los ficheros temporales se han borrado.",
                      "Analysis stopped. No report was written and temporary files were deleted."),
+    "cli.confiar_certificado": ("Aceptar el certificado de la web analizada aunque no sea válido (solo ese host; queda "
+                                "registrado como hallazgo). Para webs internas con certificado propio",
+                                "Accept the analysed website's certificate even if it is not valid (that host only; it is "
+                                "recorded as a finding). For internal sites with their own certificate"),
+    "cli.ca": ("Fichero PEM con una CA interna o el certificado del servidor en el que confiar, además de los del sistema",
+               "PEM file with an internal CA or the server certificate to trust, in addition to the system ones"),
     "cli.sin_pixeles": ("No hacer la lectura de píxeles de las imágenes (ruido de sensor y huella periódica)",
                         "Skip the pixel reading of images (sensor noise and periodic trace)"),
     "cli.sin_osv": ("No contrastar dependencias ni librerías con OSV.dev (solo se envían nombre y versión de cada paquete)",
@@ -1695,7 +1713,6 @@ class _RedireccionSegura(urllib.request.HTTPRedirectHandler):
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
-_ABRIDOR = urllib.request.build_opener(_RedireccionSegura)
 
 
 def descargar_bytes(url: str, maximo: int, timeout: int = 20) -> tuple[bytes | None, str, str]:
@@ -1704,8 +1721,10 @@ def descargar_bytes(url: str, maximo: int, timeout: int = 20) -> tuple[bytes | N
         return None, url, t("nota.solo_http")
     cabeceras = {"User-Agent": f"aimarkers/{VERSION} (+https://github.com/z115666/aimarkers)"}
     peticion = urllib.request.Request(url, headers=cabeceras)  # noqa: S310 - esquema http(s) validado arriba
+    import aimarkers_web
+    abridor = urllib.request.build_opener(_RedireccionSegura, aimarkers_web.HTTPSConPolitica())
     try:
-        with _ABRIDOR.open(peticion, timeout=timeout) as r:  # nosec B310
+        with abridor.open(peticion, timeout=timeout) as r:  # nosec B310
             return r.read(maximo + 1), r.geturl(), ""
     except (urllib.error.URLError, TimeoutError, ValueError, OSError) as e:
         return None, url, str(e)
@@ -1994,7 +2013,20 @@ def analizar_objetivo(objetivo: str, imagenes_web: bool = True, opciones=None) -
     fijar_pixeles(getattr(opciones, "pixeles", True))
     avisos: set[str] = set()
     if re.match(r"https?://", objetivo, I):
-        return analizar_web_objetivo(objetivo, opciones)
+        host = urllib.parse.urlsplit(objetivo).hostname or ""
+        confiar = getattr(opciones, "confiar_certificado", False)
+        web.fijar_tls(getattr(opciones, "ca", None), [host] if confiar else [])
+        try:
+            res = analizar_web_objetivo(objetivo, opciones)
+        finally:
+            web.fijar_tls()  # la excepción nunca se arrastra al siguiente análisis
+        if confiar:
+            res.notas.insert(0, t("nota.tls_confiado", h=host))
+        elif getattr(opciones, "ca", None):
+            res.notas.insert(0, t("nota.tls_ca", c=Path(opciones.ca).name))
+        if any("CERTIFICATE_VERIFY_FAILED" in n or "certificate verify failed" in n for n in res.notas):
+            res.notas.append(t("nota.tls_ayuda"))
+        return res
 
     solo = getattr(opciones, "solo_seguridad", False)
     ruta = Path(objetivo)
@@ -2340,6 +2372,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--seguridad", "--security", dest="seguridad", action="store_true", help=t("cli.seguridad"))
     ap.add_argument("--solo-seguridad", "--security-only", dest="solo_seguridad", action="store_true", help=t("cli.solo_seguridad"))
     ap.add_argument("--sin-dns", "--no-dns", dest="sin_dns", action="store_true", help=t("cli.sin_dns"))
+    ap.add_argument("--confiar-certificado", "--trust-certificate", dest="confiar_certificado", action="store_true",
+                    help=t("cli.confiar_certificado"))
+    ap.add_argument("--ca", metavar="PEM", help=t("cli.ca"))
     ap.add_argument("--sin-pixeles", "--no-pixels", dest="sin_pixeles", action="store_true", help=t("cli.sin_pixeles"))
     ap.add_argument("--sin-osv", "--no-osv", dest="sin_osv", action="store_true", help=t("cli.sin_osv"))
     ap.add_argument("--activo", "--active", dest="activo", action="store_true", help=t("cli.activo"))
@@ -2370,10 +2405,18 @@ def main(argv: list[str] | None = None) -> int:
             sys.stderr.write("\r\033[K" + str(dato)[:100])
             sys.stderr.flush()
 
+    if args.ca:
+        try:
+            aimarkers_web.fijar_tls(args.ca)
+        except (OSError, ssl.SSLError) as e:
+            ap.error(f"--ca {args.ca}: {e}")
+        finally:
+            aimarkers_web.fijar_tls()
     opciones = aimarkers_web.Opciones(
         rastrear=args.rastrear, max_paginas=args.max_paginas, max_imagenes=args.max_imagenes, retardo=max(0.0, args.retardo),
         imagenes=not args.sin_imagenes, seguridad=args.seguridad or args.solo_seguridad or args.activo, activo=args.activo,
-        autorizado=args.autorizado, solo_seguridad=args.solo_seguridad, dns=not args.sin_dns, osv=not args.sin_osv, pixeles=not args.sin_pixeles, progreso=progreso)
+        autorizado=args.autorizado, solo_seguridad=args.solo_seguridad, dns=not args.sin_dns, osv=not args.sin_osv, pixeles=not args.sin_pixeles, progreso=progreso,
+                                   confiar_certificado=args.confiar_certificado, ca=args.ca)
     if opciones.seguridad:
         import aimarkers_seguridad  # noqa: F401 - registra sus textos para el informe
     try:

@@ -138,6 +138,8 @@ El idioma afecta a la consola y a los informes. Los identificadores de los marca
 | `--activo --autorizado` | Modo de seguridad activo, solo con autorización (ver más abajo) |
 | `--sin-dns` | Omite las comprobaciones de SPF, DMARC, DNSSEC y CAA |
 | `--sin-osv` | No contrasta dependencias ni librerías JavaScript con OSV.dev |
+| `--ca PEM` | Confía también en esta CA o certificado de servidor (webs internas con certificado propio) |
+| `--confiar-certificado` | Acepta el certificado de la web analizada aunque no sea válido; solo ese host, y queda como hallazgo |
 | `--sin-pixeles` | Omite la lectura de píxeles de las imágenes |
 | `--umbral-cvss N` | Sale con código 3 si algún hallazgo de seguridad llega a CVSS N |
 

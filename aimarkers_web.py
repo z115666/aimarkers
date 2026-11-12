@@ -11,8 +11,10 @@ Autor: Alberto
 
 from __future__ import annotations
 
+import http.client
 import re
 import shutil
+import ssl
 import tempfile
 import time
 import urllib.error
@@ -105,13 +107,51 @@ class _Redirecciones(urllib.request.HTTPRedirectHandler):
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
+# ---------------------------------------------------------------------------
+# Política TLS: CA adicional y hosts con certificado aceptado a mano
+# ---------------------------------------------------------------------------
+
+_TLS: dict = {"ca": None, "confiados": frozenset()}
+
+
+def fijar_tls(ca: str | None = None, confiados=()) -> None:
+    """CA o certificado adicional en el que confiar (PEM) y hosts cuyo certificado no se verifica.
+
+    Los hosts confiados son solo los del objetivo que indica el usuario: nunca terceros, ni OSV.dev ni DNS.
+    """
+    if ca:
+        ssl.create_default_context(cafile=ca)  # falla aquí, y no a mitad del análisis, si el fichero no vale
+    _TLS["ca"] = ca or None
+    _TLS["confiados"] = frozenset(h.lower() for h in confiados if h)
+
+
+def contexto_tls(host: str | None) -> ssl.SSLContext:
+    if host and host.lower() in _TLS["confiados"]:
+        contexto = ssl.create_default_context()
+        contexto.check_hostname = False
+        # Solo para el host que el usuario ha decidido confiar de forma expresa
+        contexto.verify_mode = ssl.CERT_NONE  # nosec B501
+        return contexto
+    contexto = ssl.create_default_context()
+    if _TLS["ca"]:
+        contexto.load_verify_locations(cafile=_TLS["ca"])
+    return contexto
+
+
+class HTTPSConPolitica(urllib.request.HTTPSHandler):
+    """Elige el contexto TLS según el host de cada petición (también tras una redirección)."""
+
+    def https_open(self, req):
+        return self.do_open(http.client.HTTPSConnection, req, context=contexto_tls(req.host.split(":")[0].strip("[]")))
+
+
 def obtener(url: str, maximo: int = MAX_PAGINA, timeout: int = 20, metodo: str = "GET",
             cabeceras: dict[str, str] | None = None, seguir: bool = True) -> tuple[Pagina | None, str]:
     """Hace una petición http(s) y devuelve la respuesta (también si es 4xx/5xx) o un mensaje de error."""
     if not re.match(r"https?://", url, re.I):
         return None, aimarkers.t("nota.solo_http")
     manejador = _Redirecciones()
-    abridor = urllib.request.build_opener(manejador) if seguir else urllib.request.build_opener(_SinRedireccion())
+    abridor = urllib.request.build_opener(manejador if seguir else _SinRedireccion(), HTTPSConPolitica())
     peticion = urllib.request.Request(url, method=metodo,  # noqa: S310 - esquema http(s) validado arriba
                                       headers={"User-Agent": agente(), "Accept": "*/*", **(cabeceras or {})})
     try:
@@ -170,6 +210,8 @@ class Opciones:
     pixeles: bool = True             # lectura de píxeles de las imágenes (Pillow y NumPy)
     max_total: int = MAX_TOTAL_POR_DEFECTO
     progreso: object = None          # función(texto) para informar del avance
+    confiar_certificado: bool = False  # aceptar el certificado del host analizado aunque no sea válido
+    ca: str | None = None              # CA o certificado adicional (PEM) en el que confiar
 
 
 class Rastreo:

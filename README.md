@@ -138,6 +138,8 @@ The language applies to the console and the reports. Marker identifiers (`coauto
 | `--active --authorized` | Active security mode, only with authorisation (see below) |
 | `--no-dns` | Skip the SPF, DMARC, DNSSEC and CAA checks |
 | `--no-osv` | Do not check dependencies and JavaScript libraries against OSV.dev |
+| `--ca PEM` | Also trust this CA or server certificate (internal sites with their own certificate) |
+| `--trust-certificate` | Accept the analysed site's certificate even if it is not valid; that host only, and it stays as a finding |
 | `--no-pixels` | Skip the pixel reading of images |
 | `--cvss-threshold N` | Exit with code 3 if any security finding reaches CVSS N |
 
