@@ -4,6 +4,11 @@
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [semantic versioning](https://semver.org/).
 
+## [1.9.0] - 2026-11-12
+
+### Added
+- Sites that do not send their intermediate certificate are analysed like a browser would: the intermediate is downloaded from the address in the certificate (AIA), verification stays on and the root must still be trusted. New security finding: "The server does not send the full certificate chain".
+
 ## [1.8.0] - 2026-11-12
 
 ### Added

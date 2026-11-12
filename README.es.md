@@ -140,6 +140,8 @@ El idioma afecta a la consola y a los informes. Los identificadores de los marca
 | `--sin-osv` | No contrasta dependencias ni librerías JavaScript con OSV.dev |
 | `--ca PEM` | Confía también en esta CA o certificado de servidor (webs internas con certificado propio) |
 | `--confiar-certificado` | Acepta el certificado de la web analizada aunque no sea válido; solo ese host, y queda como hallazgo |
+
+Si una web no envía su certificado intermedio (un error habitual al renovar un certificado), aimarkers lo descarga de la dirección que indica el propio certificado, como hacen los navegadores, y mantiene la verificación. Lo registra como hallazgo para que se corrija el servidor.
 | `--sin-pixeles` | Omite la lectura de píxeles de las imágenes |
 | `--umbral-cvss N` | Sale con código 3 si algún hallazgo de seguridad llega a CVSS N |
 
@@ -184,7 +186,7 @@ aimarkers https://ejemplo.com --rastrear --max-imagenes 200 --retardo 1
 - Puntuación **CVSS v4.0** calculada dentro de la herramienta con el algoritmo oficial de FIRST (`cvss4.py`, comprobado contra la calculadora de referencia con 20.000 vectores). Cada hallazgo parte de un vector base tipo; la métrica de amenaza (E) refleja si hay exploits públicos, y los requisitos de entorno (CR, IR, AR) salen del **contexto de la web**: formularios de acceso, datos personales, pagos o subida de ficheros los elevan.
 - Posición en una **matriz de riesgos 5×5** (probabilidad × impacto, al estilo ISO 27005): la probabilidad sale de la explotabilidad CVSS y la madurez del exploit; el impacto, del efecto sobre cada dimensión CID ponderado por el contexto.
 
-**Webs, modo pasivo (por defecto).** Solo mira lo que recibe cualquier visitante: HTTPS y redirección, certificado y versión de TLS, HSTS, CSP, protección frente a marcos, nosniff, Referrer-Policy, Permissions-Policy, versiones expuestas, CORS, atributos de las cookies, contenido mixto, scripts de terceros sin SRI, librerías JavaScript con CVE conocidos (jQuery, jQuery UI, Bootstrap, AngularJS, Lodash, Moment, Handlebars), formularios por HTTP, contraseñas enviadas por GET, formularios sin token anti-CSRF, enlaces vulnerables a *reverse tabnabbing*, comentarios HTML sensibles, mensajes de error detallados, listado de directorios, claves y tokens expuestos, mapas de código, `robots.txt` y `security.txt`.
+**Webs, modo pasivo (por defecto).** Solo mira lo que recibe cualquier visitante: HTTPS y redirección, certificado (validez, caducidad y si el servidor envía la cadena completa) y versión de TLS, HSTS, CSP, protección frente a marcos, nosniff, Referrer-Policy, Permissions-Policy, versiones expuestas, CORS, atributos de las cookies, contenido mixto, scripts de terceros sin SRI, librerías JavaScript con CVE conocidos (jQuery, jQuery UI, Bootstrap, AngularJS, Lodash, Moment, Handlebars), formularios por HTTP, contraseñas enviadas por GET, formularios sin token anti-CSRF, enlaces vulnerables a *reverse tabnabbing*, comentarios HTML sensibles, mensajes de error detallados, listado de directorios, claves y tokens expuestos, mapas de código, `robots.txt` y `security.txt`.
 
 **Correo y DNS.** SPF, DMARC, DNSSEC y CAA del dominio, que protegen a familias y personal frente a correos que suplantan el dominio. Se consultan por DNS sobre HTTPS (Cloudflare, con Google como respaldo): solo se envía el nombre del dominio. `--sin-dns` los omite.
 

@@ -14,6 +14,7 @@ from __future__ import annotations
 import http.client
 import re
 import shutil
+import socket
 import ssl
 import tempfile
 import time
@@ -111,7 +112,11 @@ class _Redirecciones(urllib.request.HTTPRedirectHandler):
 # Política TLS: CA adicional y hosts con certificado aceptado a mano
 # ---------------------------------------------------------------------------
 
-_TLS: dict = {"ca": None, "confiados": frozenset()}
+_TLS: dict = {"ca": None, "confiados": frozenset(), "intermedios": {}, "aia": {}, "intentados": set()}
+AIA_MAX_BYTES = 20_000
+AIA_NIVELES = 3
+# OID id-ad-caIssuers (1.3.6.1.5.5.7.48.2) seguido de una URI (etiqueta [6] IA5String)
+_RE_CA_ISSUERS = re.compile(rb"\x06\x08\x2b\x06\x01\x05\x05\x07\x30\x02\x86([\x01-\x7f])")
 
 
 def fijar_tls(ca: str | None = None, confiados=()) -> None:
@@ -123,6 +128,91 @@ def fijar_tls(ca: str | None = None, confiados=()) -> None:
         ssl.create_default_context(cafile=ca)  # falla aquí, y no a mitad del análisis, si el fichero no vale
     _TLS["ca"] = ca or None
     _TLS["confiados"] = frozenset(h.lower() for h in confiados if h)
+    _TLS["intermedios"], _TLS["aia"], _TLS["intentados"] = {}, {}, set()
+
+
+def _urls_emisor(der: bytes) -> list[str]:
+    """URL «CA Issuers» de la extensión AIA del certificado: dónde descargar el certificado de su emisor."""
+    urls = []
+    for m in _RE_CA_ISSUERS.finditer(der):
+        largo = m.group(1)[0]
+        url = der[m.end():m.end() + largo].decode("ascii", "replace")
+        if re.match(r"https?://[\w.-]+(?::\d+)?/", url):
+            urls.append(url)
+    return urls
+
+
+def _ips(host: str) -> list:
+    import ipaddress
+    try:
+        return [ipaddress.ip_address(r[4][0].split("%")[0]) for r in socket.getaddrinfo(host, None)]
+    except (OSError, ValueError):
+        return []
+
+
+def _aia_permitida(url: str, host_objetivo: str) -> bool:
+    """Evita que el certificado de una web externa haga pedir direcciones de la red interna (SSRF)."""
+    destino = _ips(urllib.parse.urlsplit(url).hostname or "")
+    if not destino:
+        return False
+    if all(ip.is_global for ip in destino):
+        return True
+    return not any(ip.is_global for ip in _ips(host_objetivo))  # web interna: su emisor también puede serlo
+
+
+def completar_cadena(host: str, puerto: int = 443, timeout: int = 10) -> list[str]:
+    """Descarga los certificados intermedios que el servidor no envía, como hacen los navegadores.
+
+    Solo se usan para construir la cadena: la verificación sigue exigiendo una raíz de confianza del sistema
+    (o de --ca). Devuelve las URL de las que se descargaron, o una lista vacía.
+    """
+    clave = (host.lower(), puerto)
+    if host.lower() in _TLS["aia"]:
+        return _TLS["aia"][host.lower()]
+    if clave in _TLS["intentados"]:
+        return []
+    _TLS["intentados"].add(clave)
+    lectura = ssl.create_default_context()
+    lectura.check_hostname = False
+    # Solo para leer el certificado y saber quién lo emitió; por esta conexión no pasa ningún dato
+    lectura.verify_mode = ssl.CERT_NONE  # nosec B501
+    try:
+        with socket.create_connection((host, puerto), timeout=timeout) as s, lectura.wrap_socket(s, server_hostname=host) as t:
+            actual = t.getpeercert(binary_form=True) or b""
+    except (OSError, ssl.SSLError, ValueError):
+        return []
+    abridor = urllib.request.build_opener(_SinRedireccion())
+    cadena, usadas = [], []
+    for _ in range(AIA_NIVELES):
+        urls = [u for u in _urls_emisor(actual) if _aia_permitida(u, host)]
+        if not urls:
+            break
+        try:
+            with abridor.open(urllib.request.Request(urls[0], headers={"User-Agent": agente()}),  # noqa: S310 - http(s) validado
+                              timeout=timeout) as r:  # nosec B310
+                datos = r.read(AIA_MAX_BYTES + 1)
+        except (urllib.error.URLError, OSError, ValueError):
+            break
+        if len(datos) > AIA_MAX_BYTES:
+            break
+        try:
+            der = ssl.PEM_cert_to_DER_cert(datos.decode("ascii")) if datos.startswith(b"-----BEGIN") else datos
+        except (ValueError, UnicodeDecodeError):
+            break
+        if der[:1] != b"\x30":  # no es un certificado DER (por ejemplo, un paquete PKCS#7)
+            break
+        cadena.append(ssl.DER_cert_to_PEM_cert(der))
+        usadas.append(urls[0])
+        actual = der
+    if cadena:
+        _TLS["intermedios"][host.lower()] = cadena
+        _TLS["aia"][host.lower()] = usadas
+    return usadas
+
+
+def falta_intermedio(error) -> bool:
+    texto = f"{error} {getattr(error, 'reason', '')}"  # URLError guarda el SSLError en reason; SSLError, un código
+    return "unable to get local issuer certificate" in texto or "unable to verify the first certificate" in texto
 
 
 def contexto_tls(host: str | None) -> ssl.SSLContext:
@@ -135,7 +225,22 @@ def contexto_tls(host: str | None) -> ssl.SSLContext:
     contexto = ssl.create_default_context()
     if _TLS["ca"]:
         contexto.load_verify_locations(cafile=_TLS["ca"])
+        # --ca puede ser el propio certificado del servidor (no una raíz): se acepta como anclaje
+        contexto.verify_flags |= getattr(ssl, "VERIFY_X509_PARTIAL_CHAIN", 0)
+    intermedios = _TLS["intermedios"].get((host or "").lower())
+    if intermedios:
+        anadir_intermedios(contexto, intermedios)
     return contexto
+
+
+def anadir_intermedios(contexto: ssl.SSLContext, intermedios: list[str]) -> None:
+    """Añade intermedios solo para construir la cadena: la raíz tiene que seguir siendo de confianza.
+
+    Python 3.13 activa por defecto VERIFY_X509_PARTIAL_CHAIN, que convertiría cualquier certificado del almacén
+    (también un intermedio descargado) en anclaje de confianza. Se desactiva aquí.
+    """
+    contexto.verify_flags &= ~getattr(ssl, "VERIFY_X509_PARTIAL_CHAIN", 0)
+    contexto.load_verify_locations(cadata="".join(intermedios))
 
 
 class HTTPSConPolitica(urllib.request.HTTPSHandler):
@@ -155,7 +260,14 @@ def obtener(url: str, maximo: int = MAX_PAGINA, timeout: int = 20, metodo: str =
     peticion = urllib.request.Request(url, method=metodo,  # noqa: S310 - esquema http(s) validado arriba
                                       headers={"User-Agent": agente(), "Accept": "*/*", **(cabeceras or {})})
     try:
-        respuesta = abridor.open(peticion, timeout=timeout)  # nosec B310
+        try:
+            respuesta = abridor.open(peticion, timeout=timeout)  # nosec B310
+        except urllib.error.URLError as e:
+            partes = urllib.parse.urlsplit(peticion.full_url)
+            if isinstance(e, urllib.error.HTTPError) or not falta_intermedio(e) or partes.scheme != "https" \
+                    or not completar_cadena(partes.hostname or "", partes.port or 443):
+                raise
+            respuesta = abridor.open(peticion, timeout=timeout)  # nosec B310 - reintento con la cadena completada
     except urllib.error.HTTPError as e:
         respuesta = e
     except (urllib.error.URLError, TimeoutError, ValueError, OSError) as e:

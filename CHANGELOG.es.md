@@ -4,6 +4,11 @@
 
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa [versionado semántico](https://semver.org/lang/es/).
 
+## [1.9.0] - 2026-11-12
+
+### Añadido
+- Las webs que no envían su certificado intermedio se analizan como lo haría un navegador: el intermedio se descarga de la dirección que indica el certificado (AIA), la verificación sigue activa y la raíz tiene que seguir siendo de confianza. Nuevo hallazgo de seguridad: «El servidor no envía la cadena de certificados completa».
+
 ## [1.8.0] - 2026-11-12
 
 ### Añadido

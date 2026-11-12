@@ -670,6 +670,56 @@ class PruebasSeguridadYRastreo(unittest.TestCase):
         import aimarkers_web
         self.assertTrue(aimarkers_web.contexto_tls("otra.example").verify_mode == ssl.CERT_REQUIRED)
 
+    @unittest.skipUnless(shutil.which("openssl"), "necesita openssl para crear certificados de prueba")
+    def test_cadena_incompleta_se_completa_con_aia(self):
+        import functools
+        import ssl
+        import subprocess  # nosec B404
+
+        def openssl(*args):
+            subprocess.run(["openssl", *args], check=True, capture_output=True)  # nosec B603 B607
+
+        with tempfile.TemporaryDirectory() as tmp:
+            # Servidor HTTP con el intermedio publicado, como hacen las CA
+            publicador = http.server.ThreadingHTTPServer(
+                ("127.0.0.1", 0), functools.partial(http.server.SimpleHTTPRequestHandler, directory=tmp))
+            publicador.RequestHandlerClass.log_message = lambda *a: None
+            threading.Thread(target=publicador.serve_forever, daemon=True).start()
+            aia = f"http://127.0.0.1:{publicador.server_address[1]}/i.der"
+            Path(tmp, "ca.ext").write_text("basicConstraints=critical,CA:TRUE\nkeyUsage=critical,keyCertSign,cRLSign\n"
+                                           "subjectKeyIdentifier=hash\nauthorityKeyIdentifier=keyid\n")
+            Path(tmp, "hoja.ext").write_text("basicConstraints=CA:FALSE\nsubjectAltName=DNS:localhost,IP:127.0.0.1\n"
+                                             f"authorityInfoAccess=caIssuers;URI:{aia}\nextendedKeyUsage=serverAuth\n"
+                                             "subjectKeyIdentifier=hash\nauthorityKeyIdentifier=keyid\n")
+            openssl("req", "-x509", "-newkey", "rsa:2048", "-nodes", "-keyout", f"{tmp}/r.key", "-out", f"{tmp}/r.pem",
+                    "-days", "2", "-subj", "/CN=Raiz de prueba", "-addext", "basicConstraints=critical,CA:TRUE",
+                    "-addext", "keyUsage=critical,keyCertSign,cRLSign")
+            openssl("req", "-newkey", "rsa:2048", "-nodes", "-keyout", f"{tmp}/i.key", "-out", f"{tmp}/i.csr", "-subj", "/CN=Intermedia")
+            openssl("x509", "-req", "-in", f"{tmp}/i.csr", "-CA", f"{tmp}/r.pem", "-CAkey", f"{tmp}/r.key", "-set_serial", "2",
+                    "-days", "2", "-out", f"{tmp}/i.pem", "-extfile", f"{tmp}/ca.ext")
+            openssl("x509", "-in", f"{tmp}/i.pem", "-outform", "DER", "-out", f"{tmp}/i.der")
+            openssl("req", "-newkey", "rsa:2048", "-nodes", "-keyout", f"{tmp}/h.key", "-out", f"{tmp}/h.csr", "-subj", "/CN=localhost")
+            openssl("x509", "-req", "-in", f"{tmp}/h.csr", "-CA", f"{tmp}/i.pem", "-CAkey", f"{tmp}/i.key", "-set_serial", "3",
+                    "-days", "2", "-out", f"{tmp}/h.pem", "-extfile", f"{tmp}/hoja.ext")
+            servidor = http.server.ThreadingHTTPServer(("127.0.0.1", 0), SitioDePrueba)
+            contexto = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+            contexto.load_cert_chain(f"{tmp}/h.pem", f"{tmp}/h.key")  # solo la hoja: falta el intermedio
+            servidor.socket = contexto.wrap_socket(servidor.socket, server_side=True)
+            threading.Thread(target=servidor.serve_forever, daemon=True).start()
+            url = f"https://localhost:{servidor.server_address[1]}/"
+            try:
+                completada = aimarkers.analizar_objetivo(url, opciones=self.opciones(ca=f"{tmp}/r.pem", seguridad=True, dns=False))
+                sin_raiz = aimarkers.analizar_objetivo(url, opciones=self.opciones())
+            finally:
+                servidor.shutdown()
+                publicador.shutdown()
+        self.assertGreater(completada.ficheros_analizados, 0)
+        self.assertTrue(any(aia in n for n in completada.notas))
+        ids = {h["id"] for h in completada.seguridad.a_dict()["hallazgos"]}
+        self.assertIn("cadena-incompleta", ids)
+        self.assertNotIn("cert-invalido", ids)
+        self.assertEqual(sin_raiz.ficheros_analizados, 0)  # completar la cadena no salta la confianza en la raíz
+
     def test_osv_web_completa_librerias(self):
         import aimarkers_dependencias as dep
 

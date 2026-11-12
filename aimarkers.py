@@ -48,7 +48,7 @@ from datetime import datetime, timezone
 from html.parser import HTMLParser
 from pathlib import Path
 
-VERSION = "1.8.0"
+VERSION = "1.9.0"
 
 # ---------------------------------------------------------------------------
 # Idioma / Language
@@ -157,6 +157,10 @@ TEXTOS: dict[str, tuple[str, str]] = {
                           "que un intermediario haya cambiado el contenido. Úsalo solo en redes que controlas.",
                           "Certificate verification turned off for {h}, as requested: the analysis cannot rule out that "
                           "someone in the middle changed the content. Use it only on networks you control."),
+    "nota.tls_aia": ("{h} no envía su cadena de certificados completa; se ha completado descargando el intermedio de {u}, "
+                     "como hacen los navegadores, y la verificación sigue activa.",
+                     "{h} does not send its full certificate chain; it was completed by downloading the intermediate from "
+                     "{u}, as browsers do, and verification is still on."),
     "nota.tls_ca": ("Certificados verificados también con {c}.", "Certificates also verified against {c}."),
     "nota.tls_ayuda": ("El certificado de la web no es de confianza. Si es una web interna con certificado propio, vuelve a "
                        "analizarla con --ca ruta.pem (la CA interna o el certificado del servidor) o, si no lo tienes, con "
@@ -2018,6 +2022,8 @@ def analizar_objetivo(objetivo: str, imagenes_web: bool = True, opciones=None) -
         web.fijar_tls(getattr(opciones, "ca", None), [host] if confiar else [])
         try:
             res = analizar_web_objetivo(objetivo, opciones)
+            for completado, urls in web._TLS["aia"].items():
+                res.notas.append(t("nota.tls_aia", h=completado, u=urls[0]))
         finally:
             web.fijar_tls()  # la excepción nunca se arrastra al siguiente análisis
         if confiar:

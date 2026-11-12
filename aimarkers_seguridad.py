@@ -80,6 +80,8 @@ MITRE = {
 
 TEXTOS = {
     "seg.titulo": ("Seguridad", "Security"),
+    "seg.cadena_completada": ("Solo envía su certificado; el intermedio se ha descargado de {u}",
+                              "It only sends its own certificate; the intermediate was downloaded from {u}"),
     "seg.osv_error": ("No se ha podido consultar OSV.dev ({e}); las dependencias no se han contrastado con avisos de seguridad.",
                       "OSV.dev could not be queried ({e}); dependencies were not checked against security advisories."),
     "seg.osv_resumen": ("Dependencias contrastadas con OSV.dev: {n} versiones exactas, {v} con avisos de seguridad.",
@@ -218,6 +220,15 @@ CATALOGO = {
         ("Instala un certificado emitido por una autoridad reconocida y que cubra el nombre del sitio.",
          "Install a certificate issued by a trusted authority that covers the site name."),
         "A04", [295], ["T1557"], "AV:N/AC:H/AT:P/PR:N/UI:P/VC:H/VI:H/VA:N/SC:N/SI:N/SA:N"),
+    "cadena-incompleta": _c(
+        ("El servidor no envía la cadena de certificados completa", "The server does not send the full certificate chain"),
+        ("Falta el certificado intermedio. Algunos navegadores lo descargan por su cuenta, pero otros, las apps y muchas "
+         "herramientas muestran un aviso de certificado: los usuarios se acostumbran a aceptarlos.",
+         "The intermediate certificate is missing. Some browsers download it on their own, but others, apps and many tools "
+         "show a certificate warning: users get used to accepting them."),
+        ("Instala la cadena completa en el servidor (certificado + intermedio) y comprueba que envía al menos dos certificados.",
+         "Install the full chain on the server (certificate + intermediate) and check that it sends at least two certificates."),
+        "A04", [295], ["T1557"], "AV:N/AC:H/AT:P/PR:N/UI:A/VC:L/VI:L/VA:N/SC:N/SI:N/SA:N"),
     "cert-caduca": _c(
         ("El certificado TLS caduca pronto", "The TLS certificate expires soon"),
         ("Si caduca, los navegadores bloquearán el acceso a la web.", "Once expired, browsers will block access to the site."),
@@ -684,7 +695,7 @@ CATALOGO = {
 CATEGORIAS = ["transporte", "cabeceras", "sesion", "contenido", "componentes", "exposicion", "dns", "privacidad", "codigo"]
 CATEGORIA = {}
 for _cat, _ids in {
-    "transporte": "sin-https http-sin-redireccion sin-hsts hsts-corto cert-invalido cert-caduca tls-obsoleto tls-antiguo-aceptado",
+    "transporte": "sin-https http-sin-redireccion sin-hsts hsts-corto cert-invalido cadena-incompleta cert-caduca tls-obsoleto tls-antiguo-aceptado",
     "cabeceras": "sin-csp csp-debil sin-antiframe sin-nosniff sin-referrer sin-permissions-policy sin-coop cors-permisivo "
                  "cache-sensible metodos-peligrosos",
     "sesion": "cookie-sin-secure cookie-sin-httponly cookie-sin-samesite sin-csrf password-get panel-admin xmlrpc "
@@ -1242,6 +1253,16 @@ def analizar_tls(informe: InformeSeguridad, host: str, puerto: int = 443) -> Non
     contexto = ssl.create_default_context()  # siempre verifica: un certificado aceptado a mano sigue siendo un hallazgo
     if aimarkers_web._TLS["ca"]:
         contexto.load_verify_locations(cafile=aimarkers_web._TLS["ca"])
+    try:
+        with socket.create_connection((host, puerto), timeout=10) as s, contexto.wrap_socket(s, server_hostname=host):
+            pass
+    except ssl.SSLCertVerificationError as e:
+        if aimarkers_web.falta_intermedio(e) and aimarkers_web.completar_cadena(host, puerto):
+            urls = aimarkers_web._TLS["aia"][host.lower()]
+            informe.anadir("cadena-incompleta", f"{host}:{puerto}", aimarkers.t("seg.cadena_completada", u=urls[0]))
+            aimarkers_web.anadir_intermedios(contexto, aimarkers_web._TLS["intermedios"][host.lower()])
+    except (OSError, ssl.SSLError):
+        pass
     try:
         with socket.create_connection((host, puerto), timeout=10) as s, contexto.wrap_socket(s, server_hostname=host) as t:
             cert = t.getpeercert() or {}
